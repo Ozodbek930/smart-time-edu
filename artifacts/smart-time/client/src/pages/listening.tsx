@@ -717,7 +717,7 @@ function MultiSectionListeningExam({ test, onClose }: { test: ListeningTest; onC
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto p-6 space-y-10">
+          <div className="max-w-5xl mx-auto p-6 space-y-10">
             {secs.map((sec, sIdx) => {
               const qs: ListeningQuestion[] = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
               const secAnswers = answers[sIdx] || {};
@@ -738,53 +738,57 @@ function MultiSectionListeningExam({ test, onClose }: { test: ListeningTest; onC
                       </div>
                     </div>
                   )}
-                  {(sec as any).mapUrl && (
-                    <MapViewer mapUrl={(sec as any).mapUrl} mapCaption={(sec as any).mapCaption} />
-                  )}
-                  <div className="space-y-4">
-                    {qs.map((q) => {
-                      if (q.type === "text") {
+                  <div className={(sec as any).mapUrl ? "flex gap-5 items-start" : ""}>
+                    {(sec as any).mapUrl && (
+                      <div className="w-64 shrink-0 sticky top-4 self-start">
+                        <MapViewer mapUrl={(sec as any).mapUrl} mapCaption={(sec as any).mapCaption} />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0 space-y-4">
+                      {qs.map((q) => {
+                        if (q.type === "text") {
+                          return (
+                            <div key={q.id} className="px-4 py-3 rounded-md bg-sky-50/70 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-800">
+                              <p className="text-sm text-sky-900 dark:text-sky-200 whitespace-pre-wrap leading-relaxed">{q.question}</p>
+                            </div>
+                          );
+                        }
+                        const userAnswer = secAnswers[q.id];
+                        const answered = isAnswered(q, secAnswers);
                         return (
-                          <div key={q.id} className="px-4 py-3 rounded-md bg-sky-50/70 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-800">
-                            <p className="text-sm text-sky-900 dark:text-sky-200 whitespace-pre-wrap leading-relaxed">{q.question}</p>
+                          <div key={q.id} className={`p-4 rounded-md border transition-colors ${answered ? "border-primary/40" : "border-border"}`}>
+                            <div className="flex items-start gap-2 mb-3">
+                              <span className="shrink-0 w-7 h-7 rounded-full bg-blue-600/10 text-blue-600 flex items-center justify-center text-xs font-bold">{globalQNums[sIdx]?.[q.id]}</span>
+                              <p className="text-sm leading-relaxed">{q.question}</p>
+                            </div>
+                            {(q as any).imageUrl && (
+                              <div className="mb-3">
+                                <img
+                                  src={(q as any).imageUrl}
+                                  alt={(q as any).imageCaption || "Question image"}
+                                  className="rounded-lg border max-h-56 object-contain w-full bg-gray-50"
+                                />
+                                {(q as any).imageCaption && (
+                                  <p className="text-xs text-muted-foreground mt-1 text-center italic">{(q as any).imageCaption}</p>
+                                )}
+                              </div>
+                            )}
+                            {isTextType(q.type) ? (
+                              <Input placeholder="Write your answer..." className="text-sm" value={(userAnswer as string) || ""} onChange={e => handleAnswer(sIdx, q.id, e.target.value, true)} />
+                            ) : (
+                              <RadioGroup value={userAnswer?.toString()} onValueChange={v => handleAnswer(sIdx, q.id, v)} className="space-y-2 ml-9">
+                                {q.options.map((opt, i) => (
+                                  <div key={i} className="flex items-center gap-2 p-2 rounded-md">
+                                    <RadioGroupItem value={i.toString()} id={`ms-l-${sIdx}-${q.id}-${i}`} />
+                                    <Label htmlFor={`ms-l-${sIdx}-${q.id}-${i}`} className="text-sm cursor-pointer">{opt}</Label>
+                                  </div>
+                                ))}
+                              </RadioGroup>
+                            )}
                           </div>
                         );
-                      }
-                      const userAnswer = secAnswers[q.id];
-                      const answered = isAnswered(q, secAnswers);
-                      return (
-                        <div key={q.id} className={`p-4 rounded-md border transition-colors ${answered ? "border-primary/40" : "border-border"}`}>
-                          <div className="flex items-start gap-2 mb-3">
-                            <span className="shrink-0 w-7 h-7 rounded-full bg-blue-600/10 text-blue-600 flex items-center justify-center text-xs font-bold">{globalQNums[sIdx]?.[q.id]}</span>
-                            <p className="text-sm leading-relaxed">{q.question}</p>
-                          </div>
-                          {(q as any).imageUrl && (
-                            <div className="mb-3">
-                              <img
-                                src={(q as any).imageUrl}
-                                alt={(q as any).imageCaption || "Question image"}
-                                className="rounded-lg border max-h-56 object-contain w-full bg-gray-50"
-                              />
-                              {(q as any).imageCaption && (
-                                <p className="text-xs text-muted-foreground mt-1 text-center italic">{(q as any).imageCaption}</p>
-                              )}
-                            </div>
-                          )}
-                          {isTextType(q.type) ? (
-                            <Input placeholder="Write your answer..." className="text-sm" value={(userAnswer as string) || ""} onChange={e => handleAnswer(sIdx, q.id, e.target.value, true)} />
-                          ) : (
-                            <RadioGroup value={userAnswer?.toString()} onValueChange={v => handleAnswer(sIdx, q.id, v)} className="space-y-2 ml-9">
-                              {q.options.map((opt, i) => (
-                                <div key={i} className="flex items-center gap-2 p-2 rounded-md">
-                                  <RadioGroupItem value={i.toString()} id={`ms-l-${sIdx}-${q.id}-${i}`} />
-                                  <Label htmlFor={`ms-l-${sIdx}-${q.id}-${i}`} className="text-sm cursor-pointer">{opt}</Label>
-                                </div>
-                              ))}
-                            </RadioGroup>
-                          )}
-                        </div>
-                      );
-                    })}
+                      })}
+                    </div>
                   </div>
                 </div>
               );

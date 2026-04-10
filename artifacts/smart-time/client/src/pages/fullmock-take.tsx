@@ -683,7 +683,7 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
       {isMultiSection ? (
         /* Multi-section: SmartCEFR style — breadcrumb + part heading per section */
         <div className="flex-1 overflow-y-auto bg-white">
-          <div className="max-w-2xl mx-auto px-6 pb-10 space-y-10">
+          <div className="max-w-4xl mx-auto px-6 pb-10 space-y-10">
             {(test.testSections as any[]).map((sec: any, sIdx: number) => {
               const qs: ListeningQuestion[] = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
               const range = partRanges[sIdx] || { start: 1, end: qs.length };
@@ -706,16 +706,27 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
                       <audio controls className="w-full h-9 rounded" src={sec.audioUrl} data-testid={`mock-audio-sec-${sIdx}`} />
                     </div>
                   )}
-                  {/* Map / Diagram */}
-                  {sec.mapUrl && (
-                    <MapViewer mapUrl={sec.mapUrl} mapCaption={sec.mapCaption} />
+                  {/* Map + Questions: two-column when map exists */}
+                  {sec.mapUrl ? (
+                    <div className="flex gap-5 items-start">
+                      <div className="w-64 shrink-0 sticky top-4 self-start">
+                        <MapViewer mapUrl={sec.mapUrl} mapCaption={sec.mapCaption} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <MockListeningQuiz
+                          questions={qs}
+                          testId={`${test.id}-s${sIdx}`}
+                          onAnswersChange={secAnswers => setAnswers(prev => ({ ...prev, ...secAnswers }))}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <MockListeningQuiz
+                      questions={qs}
+                      testId={`${test.id}-s${sIdx}`}
+                      onAnswersChange={secAnswers => setAnswers(prev => ({ ...prev, ...secAnswers }))}
+                    />
                   )}
-                  {/* Questions */}
-                  <MockListeningQuiz
-                    questions={qs}
-                    testId={`${test.id}-s${sIdx}`}
-                    onAnswersChange={secAnswers => setAnswers(prev => ({ ...prev, ...secAnswers }))}
-                  />
                 </div>
               );
             })}
