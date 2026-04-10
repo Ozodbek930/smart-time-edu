@@ -614,6 +614,7 @@ function MultiSectionListeningExam({ test, onClose }: { test: ListeningTest; onC
 
   const [answers, setAnswers] = useState<Record<number, Record<number, number | string>>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [fontSize, setFontSize] = useState(14);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -623,15 +624,18 @@ function MultiSectionListeningExam({ test, onClose }: { test: ListeningTest; onC
   let qCounter = 0;
   const globalQNums: Record<number, Record<number, number>> = {};
   const allRealQs: Array<ListeningQuestion & { sIdx: number }> = [];
+  const partQRanges: Array<{ start: number; end: number }> = [];
   secs.forEach((sec, sIdx) => {
     const qs: ListeningQuestion[] = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
     globalQNums[sIdx] = {};
+    const rangeStart = qCounter + 1;
     qs.forEach(q => {
       if (q.type !== "text") {
         globalQNums[sIdx][q.id] = ++qCounter;
         allRealQs.push({ ...q, sIdx });
       }
     });
+    partQRanges.push({ start: rangeStart, end: qCounter });
   });
   const totalQs = allRealQs.length;
   const answeredCount = allRealQs.filter(q => {
@@ -645,6 +649,8 @@ function MultiSectionListeningExam({ test, onClose }: { test: ListeningTest; onC
   }, [submitted]);
 
   const timer = useCountdownTimer(test.duration, handleAutoSubmit, !submitted);
+  const isTimerCritical = timer.secondsLeft < 120;
+  const isTimerWarning = timer.secondsLeft < 300 && !isTimerCritical;
 
   const doSubmit = async () => {
     const allAnswers: Record<string, any> = {};
@@ -672,134 +678,267 @@ function MultiSectionListeningExam({ test, onClose }: { test: ListeningTest; onC
     setAnswers(prev => ({ ...prev, [sIdx]: { ...(prev[sIdx] || {}), [id]: asText ? value : parseInt(value) } }));
   };
 
+  const scrollToQ = (qId: number) => {
+    document.getElementById(`ms-q-${qId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
   return (
-    <motion.div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} data-testid="multi-section-listening-exam">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b bg-background/95 backdrop-blur shrink-0 gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-md bg-blue-600 flex items-center justify-center shrink-0">
-            <Headphones className="w-4 h-4 text-white" />
+    <motion.div className="fixed inset-0 z-50 bg-white flex flex-col overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} data-testid="multi-section-listening-exam">
+
+      {/* ── SmartCEFR-style Top Bar ── */}
+      <div className="flex items-center px-4 py-2 border-b bg-white shrink-0 gap-2">
+        {/* Left: Brand */}
+        <div className="flex flex-col shrink-0 min-w-0">
+          <span className="font-bold text-sm text-gray-900 leading-tight tracking-tight">SMART TIME</span>
+          <span className="text-[10px] text-gray-400 leading-tight uppercase tracking-widest">Education</span>
+        </div>
+
+        {/* Center: LISTENING + Timer + Controls */}
+        <div className="flex items-center gap-2 flex-1 justify-center flex-wrap">
+          <div className={`flex items-center gap-2 rounded px-3 py-1.5 ${isTimerCritical ? "bg-red-100" : "bg-gray-100"}`}>
+            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest hidden sm:block">LISTENING</span>
+            <span className={`font-mono text-sm font-bold ${isTimerCritical ? "text-red-600" : isTimerWarning ? "text-amber-600" : "text-gray-800"}`}>
+              {timer.display}
+            </span>
           </div>
-          <div className="min-w-0">
-            <p className="font-semibold text-sm truncate max-w-[200px] sm:max-w-sm">{test.title}</p>
-            <p className="text-xs text-muted-foreground">{secs.length} sections · {totalQs} questions · {answeredCount} answered</p>
+          <div className="hidden sm:flex items-center gap-1">
+            <button
+              onClick={() => setFontSize(s => Math.max(12, s - 1))}
+              className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 text-gray-600 font-semibold"
+            >A-</button>
+            <button
+              onClick={() => setFontSize(s => Math.min(20, s + 1))}
+              className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 text-gray-600 font-semibold"
+            >A+</button>
           </div>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-mono font-bold ${timer.secondsLeft < 120 ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400" : "bg-muted text-foreground"}`}>
-            <Clock className="w-3.5 h-3.5" />
-            {timer.display}
-          </div>
+
+        {/* Right: Submit + Exit */}
+        <div className="flex items-center gap-2 shrink-0">
           {!submitted && (
-            <Button size="sm" onClick={() => { if (window.confirm("Submit the test?")) submitMutation.mutate(); }} disabled={submitMutation.isPending} className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-submit-multi-listening">
-              <Send className="w-3.5 h-3.5" /> Submit
-            </Button>
+            <button
+              onClick={() => { if (window.confirm("Submit the test?")) submitMutation.mutate(); }}
+              disabled={submitMutation.isPending}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs font-semibold rounded transition-colors disabled:opacity-60"
+              data-testid="button-submit-multi-listening"
+            >
+              {submitMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+              Submit
+            </button>
           )}
-          <Button variant="outline" size="sm" onClick={() => { if (submitted || window.confirm("Exit? Your answers won't be saved.")) onClose(); }} className="gap-1.5" data-testid="button-close-multi-listening">
-            <X className="w-4 h-4" /> Exit
-          </Button>
+          <button
+            onClick={() => { if (submitted || window.confirm("Exit? Your answers won't be saved.")) onClose(); }}
+            className="p-1.5 hover:bg-gray-100 rounded text-gray-500 transition-colors"
+            data-testid="button-close-multi-listening"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
-      </div>
-      <div className="h-1 bg-muted shrink-0">
-        <div className="h-1 bg-blue-500 transition-all duration-500" style={{ width: `${totalQs > 0 ? (answeredCount / totalQs) * 100 : 0}%` }} />
       </div>
 
       {submitted ? (
         <div className="flex-1 flex items-center justify-center p-8 text-center">
           <div className="space-y-4">
-            <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-950/50 border-2 border-green-400 flex items-center justify-center mx-auto">
+            <div className="w-16 h-16 rounded-full bg-green-100 border-2 border-green-400 flex items-center justify-center mx-auto">
               <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
             <h2 className="text-xl font-bold">Test Submitted!</h2>
-            <p className="text-muted-foreground text-sm">Score: {allRealQs.filter(q => checkAnswer(q, answers[q.sIdx]?.[q.id])).length} / {totalQs}</p>
-            <Button onClick={onClose} className="gap-2"><RotateCcw className="w-4 h-4" /> Done</Button>
+            <p className="text-gray-500 text-sm">Score: {allRealQs.filter(q => checkAnswer(q, answers[q.sIdx]?.[q.id])).length} / {totalQs}</p>
+            <button onClick={onClose} className="flex items-center gap-2 mx-auto px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700">
+              <RotateCcw className="w-4 h-4" /> Done
+            </button>
           </div>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-5xl mx-auto p-6 space-y-10">
-            {secs.map((sec, sIdx) => {
-              const qs: ListeningQuestion[] = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
-              const secAnswers = answers[sIdx] || {};
-              return (
-                <div key={sIdx} className="space-y-4" data-testid={`ms-listening-section-${sIdx + 1}`}>
-                  <div className="flex items-center gap-3 pb-3 border-b-2 border-blue-500">
-                    <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shrink-0">{sec.sectionNumber}</div>
-                    <p className="font-semibold">Section {sec.sectionNumber}</p>
-                  </div>
-                  {sec.audioUrl && (
-                    <div className="rounded-xl border bg-blue-50/60 dark:bg-blue-950/20 overflow-hidden">
-                      <div className="flex items-center gap-2 px-4 py-2 bg-blue-600">
-                        <Headphones className="w-4 h-4 text-white" />
-                        <span className="text-xs font-semibold text-white">Section {sec.sectionNumber} — Listen carefully</span>
-                      </div>
-                      <div className="p-4">
-                        <audio controls className="w-full rounded" src={sec.audioUrl} data-testid={`multi-audio-${sIdx}`} />
-                      </div>
-                    </div>
-                  )}
-                  <div className={(sec as any).mapUrl ? "flex gap-5 items-start" : ""}>
-                    {(sec as any).mapUrl && (
-                      <div className="w-64 shrink-0 sticky top-4 self-start">
-                        <MapViewer mapUrl={(sec as any).mapUrl} mapCaption={(sec as any).mapCaption} />
+        <>
+          <div className="flex-1 overflow-y-auto bg-white">
+            <div className="max-w-5xl mx-auto p-6 space-y-10" style={{ fontSize: `${fontSize}px` }}>
+              {secs.map((sec, sIdx) => {
+                const qs: ListeningQuestion[] = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
+                const secAnswers = answers[sIdx] || {};
+                const range = partQRanges[sIdx] || { start: 1, end: qs.filter(q => q.type !== "text").length };
+                const partNum = (sec as any).sectionNumber || (sIdx + 1);
+                const hasMap = !!(sec as any).mapUrl;
+                return (
+                  <div key={sIdx} className="space-y-4" data-testid={`ms-listening-section-${sIdx + 1}`}>
+                    {/* SmartCEFR-style Part heading */}
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Part {partNum}
+                      {range.start <= range.end && (
+                        <span className="text-gray-400 font-normal text-base ml-2">Questions {range.start}–{range.end}</span>
+                      )}
+                    </h2>
+                    {/* Audio player */}
+                    {sec.audioUrl && (
+                      <div className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-3">
+                        <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Audio — Listen carefully</p>
+                        <audio controls className="w-full h-9 rounded" src={sec.audioUrl} data-testid={`multi-audio-${sIdx}`} />
                       </div>
                     )}
-                    <div className="flex-1 min-w-0 space-y-4">
-                      {qs.map((q) => {
-                        if (q.type === "text") {
+                    {/* Map + Questions: two-column when map exists */}
+                    {hasMap ? (
+                      <div className="flex gap-5 items-start">
+                        {/* Map panel */}
+                        <div className="w-72 shrink-0 sticky top-4 self-start rounded-lg border-2 border-blue-300 overflow-hidden">
+                          <div className="bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800 border-b border-blue-200">Map</div>
+                          <img
+                            src={(sec as any).mapUrl}
+                            alt={(sec as any).mapCaption || "Map"}
+                            className="w-full object-contain bg-white"
+                          />
+                        </div>
+                        {/* Questions panel */}
+                        <div className="flex-1 min-w-0">
+                          <div className="rounded-lg border border-gray-200 overflow-hidden">
+                            <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
+                              <span className="text-sm font-semibold text-gray-700">Questions {range.start}–{range.end}</span>
+                            </div>
+                            <div className="p-3 space-y-3">
+                              {qs.filter(q => q.type !== "text").map((q) => {
+                                const userAnswer = secAnswers[q.id];
+                                const qLabel = `Q${globalQNums[sIdx]?.[q.id]} ${q.question}`;
+                                return (
+                                  <div key={q.id} id={`ms-q-${q.id}`} className="scroll-mt-20">
+                                    <p className="text-sm font-medium text-gray-700 mb-1.5">{qLabel}</p>
+                                    {isTextType(q.type) ? (
+                                      <Input
+                                        placeholder="Write your answer..."
+                                        value={typeof userAnswer === "string" ? userAnswer : ""}
+                                        onChange={e => handleAnswer(sIdx, q.id, e.target.value, true)}
+                                        className="text-sm max-w-sm"
+                                      />
+                                    ) : (
+                                      <select
+                                        value={userAnswer !== undefined ? userAnswer.toString() : ""}
+                                        onChange={e => handleAnswer(sIdx, q.id, e.target.value)}
+                                        className="w-full max-w-sm p-2.5 rounded-lg border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400/40 cursor-pointer"
+                                      >
+                                        <option value="">Select</option>
+                                        {q.options.map((opt, i) => (
+                                          <option key={i} value={i.toString()}>{opt}</option>
+                                        ))}
+                                      </select>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* No map: full-width questions */
+                      <div className="space-y-3">
+                        {qs.map((q) => {
+                          if (q.type === "text") {
+                            return (
+                              <div key={q.id} className="px-4 py-3 rounded-lg bg-amber-50 border border-amber-200">
+                                <p className="text-sm text-amber-900 whitespace-pre-wrap leading-relaxed italic font-medium">{q.question}</p>
+                              </div>
+                            );
+                          }
+                          const userAnswer = secAnswers[q.id];
+                          const answered = isAnswered(q, secAnswers);
                           return (
-                            <div key={q.id} className="px-4 py-3 rounded-md bg-sky-50/70 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-800">
-                              <p className="text-sm text-sky-900 dark:text-sky-200 whitespace-pre-wrap leading-relaxed">{q.question}</p>
+                            <div
+                              key={q.id}
+                              id={`ms-q-${q.id}`}
+                              className={`rounded-xl border-2 overflow-hidden scroll-mt-20 transition-colors ${answered ? "border-blue-200" : "border-gray-100"} bg-white`}
+                              data-testid={`ms-q-block-${q.id}`}
+                            >
+                              <div className="flex items-start gap-3 px-4 pt-4 pb-3">
+                                <span className="shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-sm">
+                                  {globalQNums[sIdx]?.[q.id]}
+                                </span>
+                                <p className="text-sm font-medium leading-relaxed pt-0.5">{q.question}</p>
+                              </div>
+                              {(q as any).imageUrl && (
+                                <div className="px-4 pb-3">
+                                  <img src={(q as any).imageUrl} alt={(q as any).imageCaption || "Question image"} className="rounded-lg border max-h-56 object-contain w-full bg-gray-50" />
+                                  {(q as any).imageCaption && <p className="text-xs text-gray-500 mt-1 text-center italic">{(q as any).imageCaption}</p>}
+                                </div>
+                              )}
+                              {isTextType(q.type) ? (
+                                <div className="px-4 pb-4">
+                                  <Input placeholder="Write your answer..." className="text-sm max-w-sm" value={(userAnswer as string) || ""} onChange={e => handleAnswer(sIdx, q.id, e.target.value, true)} />
+                                </div>
+                              ) : isMatchType(q.type) ? (
+                                <div className="px-4 pb-4">
+                                  <select
+                                    value={userAnswer !== undefined ? userAnswer.toString() : ""}
+                                    onChange={e => handleAnswer(sIdx, q.id, e.target.value)}
+                                    className="w-full max-w-sm p-2.5 rounded-lg border border-gray-300 text-sm bg-white cursor-pointer hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/40"
+                                  >
+                                    <option value="">Select</option>
+                                    {q.options.map((opt, i) => <option key={i} value={i.toString()}>{opt}</option>)}
+                                  </select>
+                                </div>
+                              ) : (q.type === "tfng" || q.type === "ynng") ? (
+                                <div className="flex gap-2 px-4 pb-4 flex-wrap">
+                                  {(q.type === "tfng" ? ["True", "False", "Not Given"] : ["Yes", "No", "Not Given"]).map((lbl, optIdx) => {
+                                    const isSelected = userAnswer === optIdx;
+                                    return (
+                                      <button key={optIdx} type="button" onClick={() => handleAnswer(sIdx, q.id, optIdx.toString())} className={`px-4 py-2 rounded-xl border-2 text-sm font-semibold transition-all ${isSelected ? "border-blue-600 bg-blue-100 text-blue-800" : "border-gray-200 text-gray-600 hover:border-blue-400 hover:bg-blue-50"}`}>
+                                        {lbl}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                                  {q.options.map((opt, optIdx) => {
+                                    const isSelected = userAnswer === optIdx;
+                                    return (
+                                      <button key={optIdx} type="button" onClick={() => handleAnswer(sIdx, q.id, optIdx.toString())} className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-all ${isSelected ? "bg-blue-50 text-blue-900" : "hover:bg-gray-50 text-gray-700"}`}>
+                                        <span className={`shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${isSelected ? "border-blue-600 bg-blue-600 text-white" : "border-gray-300 text-gray-500"}`}>{String.fromCharCode(65 + optIdx)}</span>
+                                        <span className="flex-1 leading-snug">{opt}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
                           );
-                        }
-                        const userAnswer = secAnswers[q.id];
-                        const answered = isAnswered(q, secAnswers);
-                        return (
-                          <div key={q.id} className={`p-4 rounded-md border transition-colors ${answered ? "border-primary/40" : "border-border"}`}>
-                            <div className="flex items-start gap-2 mb-3">
-                              <span className="shrink-0 w-7 h-7 rounded-full bg-blue-600/10 text-blue-600 flex items-center justify-center text-xs font-bold">{globalQNums[sIdx]?.[q.id]}</span>
-                              <p className="text-sm leading-relaxed">{q.question}</p>
-                            </div>
-                            {(q as any).imageUrl && (
-                              <div className="mb-3">
-                                <img
-                                  src={(q as any).imageUrl}
-                                  alt={(q as any).imageCaption || "Question image"}
-                                  className="rounded-lg border max-h-56 object-contain w-full bg-gray-50"
-                                />
-                                {(q as any).imageCaption && (
-                                  <p className="text-xs text-muted-foreground mt-1 text-center italic">{(q as any).imageCaption}</p>
-                                )}
-                              </div>
-                            )}
-                            {isTextType(q.type) ? (
-                              <Input placeholder="Write your answer..." className="text-sm" value={(userAnswer as string) || ""} onChange={e => handleAnswer(sIdx, q.id, e.target.value, true)} />
-                            ) : (
-                              <RadioGroup value={userAnswer?.toString()} onValueChange={v => handleAnswer(sIdx, q.id, v)} className="space-y-2 ml-9">
-                                {q.options.map((opt, i) => (
-                                  <div key={i} className="flex items-center gap-2 p-2 rounded-md">
-                                    <RadioGroupItem value={i.toString()} id={`ms-l-${sIdx}-${q.id}-${i}`} />
-                                    <Label htmlFor={`ms-l-${sIdx}-${q.id}-${i}`} className="text-sm cursor-pointer">{opt}</Label>
-                                  </div>
-                                ))}
-                              </RadioGroup>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                        })}
+                      </div>
+                    )}
                   </div>
-                </div>
-              );
-            })}
-            <div className="pt-4 pb-8 flex justify-center border-t">
-              <Button onClick={() => { if (window.confirm("Submit the test?")) submitMutation.mutate(); }} disabled={submitMutation.isPending} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8" data-testid="button-submit-multi-listening-bottom">
-                <Send className="w-4 h-4" /> Submit Test ({answeredCount}/{totalQs} answered)
-              </Button>
+                );
+              })}
             </div>
           </div>
-        </div>
+
+          {/* ── SmartCEFR-style Bottom Question Navigator ── */}
+          {allRealQs.length > 0 && (
+            <div className="shrink-0 border-t bg-white" data-testid="ms-listening-bottom-nav">
+              <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
+                <span className="text-xs font-semibold text-gray-600">Listening Q1–{totalQs}</span>
+                <span className="text-xs text-gray-500">Unanswered: <span className="font-bold text-gray-700">{totalQs - answeredCount}</span></span>
+              </div>
+              <div className="px-3 py-2.5 flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                {allRealQs.map((q, idx) => {
+                  const ans = answers[q.sIdx]?.[q.id];
+                  const answered = isTextType(q.type) ? typeof ans === "string" && ans.trim().length > 0 : ans !== undefined;
+                  return (
+                    <button
+                      key={q.id}
+                      type="button"
+                      onClick={() => scrollToQ(q.id)}
+                      data-testid={`ms-nav-q-${idx + 1}`}
+                      className={`w-8 h-8 rounded-full text-xs font-bold transition-all duration-200 border-2 cursor-pointer shrink-0 ${
+                        answered
+                          ? "bg-blue-600 border-blue-600 text-white"
+                          : "bg-rose-50 border-rose-200 text-rose-400 hover:border-blue-400 hover:text-blue-600"
+                      }`}
+                    >
+                      {idx + 1}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </motion.div>
   );

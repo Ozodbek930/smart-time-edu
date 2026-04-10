@@ -101,38 +101,38 @@ function getStepLabel(type: string, sectionIndex?: number) {
 
 interface NavItem { id: number; answered: boolean }
 
-function MockNavBar({ items, testId, onScroll }: {
+function MockNavBar({ items, testId, onScroll, label, startIdx = 0 }: {
   items: NavItem[];
   testId: string;
   onScroll: (id: number) => void;
+  label?: string;
+  startIdx?: number;
 }) {
   if (items.length === 0) return null;
   const answeredCount = items.filter(i => i.answered).length;
+  const unanswered = items.length - answeredCount;
   return (
-    <div className="shrink-0 border-t bg-background/95 backdrop-blur" data-testid={`mock-nav-${testId}`}>
-      <div className="px-4 py-2.5">
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <span className="text-xs text-muted-foreground font-medium">
-            <span className="font-bold text-foreground">{answeredCount}</span>/{items.length} answered
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {items.map((item, idx) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => onScroll(item.id)}
-              data-testid={`mock-q-${testId}-${idx + 1}`}
-              className={`w-8 h-8 rounded-full text-xs font-bold transition-all duration-200 border-2 cursor-pointer shrink-0 ${
-                item.answered
-                  ? "bg-blue-600 border-blue-600 text-white"
-                  : "bg-white border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-600"
-              }`}
-            >
-              {idx + 1}
-            </button>
-          ))}
-        </div>
+    <div className="shrink-0 border-t bg-white" data-testid={`mock-nav-${testId}`}>
+      <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
+        <span className="text-xs font-semibold text-gray-600">{label || `Q${startIdx + 1}–${startIdx + items.length}`}</span>
+        <span className="text-xs text-gray-500">Unanswered: <span className="font-bold text-gray-700">{unanswered}</span></span>
+      </div>
+      <div className="px-3 py-2.5 flex items-center gap-1.5 flex-wrap">
+        {items.map((item, idx) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onScroll(item.id)}
+            data-testid={`mock-q-${testId}-${startIdx + idx + 1}`}
+            className={`w-8 h-8 rounded-full text-xs font-bold transition-all duration-200 border-2 cursor-pointer shrink-0 ${
+              item.answered
+                ? "bg-blue-600 border-blue-600 text-white"
+                : "bg-rose-50 border-rose-200 text-rose-400 hover:border-blue-400 hover:text-blue-600"
+            }`}
+          >
+            {startIdx + idx + 1}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -269,10 +269,16 @@ function MockListeningQuiz({
   questions,
   testId,
   onAnswersChange,
+  hideNav,
+  label,
+  startQNum,
 }: {
   questions: ListeningQuestion[];
   testId: string;
   onAnswersChange: (answers: Record<number, number | string>) => void;
+  hideNav?: boolean;
+  label?: string;
+  startQNum?: number;
 }) {
   const [answers, setAnswers] = useState<Record<number, number | string>>({});
 
@@ -282,7 +288,7 @@ function MockListeningQuiz({
   const realQs = qs.filter(q => q.type !== "text");
 
   const qNums: Record<number, number> = {};
-  let n = 0;
+  let n = startQNum ? startQNum - 1 : 0;
   qs.forEach(q => { if (q.type !== "text") qNums[q.id] = ++n; });
 
   const setAnswer = (id: number, val: number | string) => {
@@ -309,8 +315,8 @@ function MockListeningQuiz({
         {qs.map(q => {
           if (q.type === "text") {
             return (
-              <div key={q.id} className="px-4 py-3 rounded-xl bg-blue-50 border border-blue-200">
-                <p className="text-sm text-blue-900 whitespace-pre-wrap leading-relaxed">{q.question}</p>
+              <div key={q.id} className="px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
+                <p className="text-sm text-amber-900 whitespace-pre-wrap leading-relaxed italic font-medium">{q.question}</p>
               </div>
             );
           }
@@ -398,7 +404,7 @@ function MockListeningQuiz({
           );
         })}
       </div>
-      <MockNavBar items={navItems} testId={testId} onScroll={scrollTo} />
+      {!hideNav && <MockNavBar items={navItems} testId={testId} onScroll={scrollTo} label={label} startIdx={startQNum ? startQNum - 1 : 0} />}
     </div>
   );
 }
@@ -411,10 +417,14 @@ function MockReadingQuiz({
   questions,
   testId,
   onAnswersChange,
+  label,
+  startQNum,
 }: {
   questions: ReadingQuestion[];
   testId: string;
   onAnswersChange: (answers: Record<number, number | string>) => void;
+  label?: string;
+  startQNum?: number;
 }) {
   const [answers, setAnswers] = useState<Record<number, number | string>>({});
 
@@ -424,7 +434,7 @@ function MockReadingQuiz({
   const realQs = qs.filter(q => q.type !== "text");
 
   const qNums: Record<number, number> = {};
-  let n = 0;
+  let n = startQNum ? startQNum - 1 : 0;
   qs.forEach(q => { if (q.type !== "text") qNums[q.id] = ++n; });
 
   const setAnswer = (id: number, val: number | string) => {
@@ -540,7 +550,7 @@ function MockReadingQuiz({
           );
         })}
       </div>
-      <MockNavBar items={navItems} testId={testId} onScroll={scrollTo} />
+      <MockNavBar items={navItems} testId={testId} onScroll={scrollTo} label={label} startIdx={startQNum ? startQNum - 1 : 0} />
     </div>
   );
 }
@@ -678,60 +688,87 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
     return { start, end: globalN };
   });
 
+  // Build combined nav items for multi-section (all questions merged, global numbering)
+  const allMultiQs: Array<{ id: number; isText: boolean; secId: string }> = isMultiSection
+    ? (test.testSections as any[]).flatMap((sec: any, sIdx: number) => {
+        const qs = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
+        return qs
+          .filter((q: any) => q.type !== "text")
+          .map((q: any) => ({ id: q.id, isText: q.type === "completion" || q.type === "short-answer", secId: `${test.id}-s${sIdx}` }));
+      })
+    : [];
+  const totalQCount = isMultiSection ? allMultiQs.length : globalN;
+  const combinedNavLabel = `Listening Q1–${totalQCount}`;
+
   return (
     <div className="flex flex-col h-full min-h-0">
       {isMultiSection ? (
         /* Multi-section: SmartCEFR style — breadcrumb + part heading per section */
-        <div className="flex-1 overflow-y-auto bg-white">
-          <div className="max-w-4xl mx-auto px-6 pb-10 space-y-10">
-            {(test.testSections as any[]).map((sec: any, sIdx: number) => {
-              const qs: ListeningQuestion[] = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
-              const range = partRanges[sIdx] || { start: 1, end: qs.length };
-              return (
-                <div key={sIdx} className="space-y-4 pt-6">
-                  {/* Breadcrumb */}
-                  <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                    <span className="uppercase tracking-widest font-semibold">Listening</span>
-                    <ChevronRight className="w-3 h-3" />
-                    <span className="text-gray-600 font-medium">Part {sIdx + 1} ({range.start}–{range.end})</span>
+        <>
+          <div className="flex-1 overflow-y-auto bg-white">
+            <div className="max-w-4xl mx-auto px-6 pb-10 space-y-10">
+              {(test.testSections as any[]).map((sec: any, sIdx: number) => {
+                const qs: ListeningQuestion[] = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
+                const range = partRanges[sIdx] || { start: 1, end: qs.length };
+                return (
+                  <div key={sIdx} className="space-y-4 pt-6">
+                    {/* Part heading */}
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Part {sIdx + 1} <span className="text-gray-400 font-normal text-base">Questions {range.start}–{range.end}</span>
+                    </h2>
+                    {/* Audio */}
+                    {sec.audioUrl && (
+                      <div className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-3">
+                        <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Audio</p>
+                        <audio controls className="w-full h-9 rounded" src={sec.audioUrl} data-testid={`mock-audio-sec-${sIdx}`} />
+                      </div>
+                    )}
+                    {/* Map + Questions: two-column when map exists */}
+                    {sec.mapUrl ? (
+                      <div className="flex gap-5 items-start">
+                        <div className="w-64 shrink-0 sticky top-4 self-start">
+                          <MapViewer mapUrl={sec.mapUrl} mapCaption={sec.mapCaption} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <MockListeningQuiz
+                            questions={qs}
+                            testId={`${test.id}-s${sIdx}`}
+                            onAnswersChange={secAnswers => setAnswers(prev => ({ ...prev, ...secAnswers }))}
+                            hideNav={true}
+                            startQNum={range.start}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <MockListeningQuiz
+                        questions={qs}
+                        testId={`${test.id}-s${sIdx}`}
+                        onAnswersChange={secAnswers => setAnswers(prev => ({ ...prev, ...secAnswers }))}
+                        hideNav={true}
+                        startQNum={range.start}
+                      />
+                    )}
                   </div>
-                  {/* Part heading */}
-                  <h2 className="text-xl font-bold text-gray-900">
-                    Part {sIdx + 1} <span className="text-gray-400 font-normal text-base">Questions {range.start}–{range.end}</span>
-                  </h2>
-                  {/* Audio */}
-                  {sec.audioUrl && (
-                    <div className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-3">
-                      <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Audio</p>
-                      <audio controls className="w-full h-9 rounded" src={sec.audioUrl} data-testid={`mock-audio-sec-${sIdx}`} />
-                    </div>
-                  )}
-                  {/* Map + Questions: two-column when map exists */}
-                  {sec.mapUrl ? (
-                    <div className="flex gap-5 items-start">
-                      <div className="w-64 shrink-0 sticky top-4 self-start">
-                        <MapViewer mapUrl={sec.mapUrl} mapCaption={sec.mapCaption} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <MockListeningQuiz
-                          questions={qs}
-                          testId={`${test.id}-s${sIdx}`}
-                          onAnswersChange={secAnswers => setAnswers(prev => ({ ...prev, ...secAnswers }))}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <MockListeningQuiz
-                      questions={qs}
-                      testId={`${test.id}-s${sIdx}`}
-                      onAnswersChange={secAnswers => setAnswers(prev => ({ ...prev, ...secAnswers }))}
-                    />
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+          {/* Combined bottom nav bar across all sections */}
+          <MockNavBar
+            items={allMultiQs.map(q => ({
+              id: q.id,
+              answered: q.isText
+                ? typeof answers[q.id] === "string" && (answers[q.id] as string).trim().length > 0
+                : answers[q.id] !== undefined,
+            }))}
+            testId={test.id}
+            onScroll={(id) => {
+              const el = allMultiQs.find(q => q.id === id);
+              if (el) document.getElementById(`mq-${el.secId}-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }}
+            label={combinedNavLabel}
+          />
+        </>
       ) : (
         /* Single-section listening */
         <>
@@ -760,7 +797,7 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
           <div className="flex-1 overflow-y-auto bg-white">
             <div className="max-w-2xl mx-auto px-6 py-5 space-y-5">
               {mode === "test" && test.questions.length > 0 && (
-                <MockListeningQuiz questions={test.questions} testId={test.id} onAnswersChange={setAnswers} />
+                <MockListeningQuiz questions={test.questions} testId={test.id} onAnswersChange={setAnswers} label={`Listening Q1–${partRanges[0]?.end || "?"}`} />
               )}
               {mode === "written" && (
                 <div className="space-y-3">
@@ -886,6 +923,8 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, 
                         onAnswersChange={secAnswers => {
                           setAnswers(prev => ({ ...prev, ...secAnswers }));
                         }}
+                        label={`Reading Q${range.start}–${range.end}`}
+                        startQNum={range.start}
                       />
                     </div>
                   </div>
@@ -918,6 +957,7 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, 
                   questions={test.questions}
                   testId={test.id}
                   onAnswersChange={setAnswers}
+                  label={`Reading Q1–${readingPartRanges[0]?.end || "?"}`}
                 />
               ) : (mode === "written" || mode === "mixed") ? (
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
