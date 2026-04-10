@@ -328,7 +328,7 @@ function ReadingTestCard({ test, index }: { test: ReadingTest; index: number }) 
                 data-testid={`button-start-test-${test.id}`}
               >
                 <Play className="w-4 h-4" />
-                {mode === "written" ? "O'qish va yozish" : mode === "mixed" ? "Boshlash" : t.reading.showPassage}
+                {mode === "written" ? t.reading.readAndWrite : mode === "mixed" ? t.reading.startMode : t.reading.showPassage}
               </Button>
             </CardContent>
           </Card>

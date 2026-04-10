@@ -338,7 +338,7 @@ function ListeningTestCard({ test, index }: { test: ListeningTest; index: number
                 data-testid={`button-start-test-${test.id}`}
               >
                 <Play className="w-4 h-4" />
-                {mode === "written" ? "Yozish" : mode === "mixed" ? "Boshlash" : t.listening.startPractice}
+                {mode === "written" ? t.listening.writeMode : mode === "mixed" ? t.listening.startMode : t.listening.startPractice}
               </Button>
             </CardContent>
           </Card>

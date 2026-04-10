@@ -239,22 +239,22 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div className="text-center mb-14 space-y-3" variants={fadeInUp} transition={{ duration: 0.6 }}>
             <Badge variant="secondary" className="px-3 py-1 text-xs font-semibold tracking-widest uppercase text-primary bg-primary/8 border border-primary/20">
-              <Zap className="w-3 h-3 mr-1" /> Все модули
+              <Zap className="w-3 h-3 mr-1" /> {t.skills.allModules}
             </Badge>
             <h2 className="text-3xl md:text-5xl font-black tracking-tight">
-              Подготовка по всем <span className="gradient-text">навыкам IELTS</span>
+              {t.skills.modulesHeading}
             </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Практикуйте каждый раздел по отдельности или проходите полный пробный экзамен</p>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">{t.skills.modulesSubtitle}</p>
           </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
-              { icon: Mic, label: "Speaking", desc: "Записывайте ответы и получайте оценку от преподавателя", color: "from-rose-500 to-pink-600", bg: "bg-rose-500/5", border: "border-rose-500/15", href: "/speaking" },
-              { icon: Headphones, label: "Listening", desc: "Тест, письменный и смешанный режимы — с аудио или без", color: "from-blue-500 to-indigo-600", bg: "bg-blue-500/5", border: "border-blue-500/15", href: "/listening" },
-              { icon: BookOpen, label: "Reading", desc: "Сплит-экран: текст слева, вопросы справа. Подсветка слов", color: "from-emerald-500 to-teal-600", bg: "bg-emerald-500/5", border: "border-emerald-500/15", href: "/reading" },
-              { icon: PenTool, label: "Writing", desc: "AI-оценка эссе по 4 критериям IELTS с подробным разбором", color: "from-violet-500 to-purple-600", bg: "bg-violet-500/5", border: "border-violet-500/15", href: "/writing" },
-              { icon: Trophy, label: "Full Mock", desc: "Полный пробный экзамен: Speaking + Listening + Reading + Writing", color: "from-amber-500 to-orange-600", bg: "bg-amber-500/5", border: "border-amber-500/15", href: "/fullmock" },
-              { icon: Sparkles, label: "AI Feedback", desc: "Gemini AI оценивает письменные работы мгновенно и точно", color: "from-fuchsia-500 to-pink-600", bg: "bg-fuchsia-500/5", border: "border-fuchsia-500/15", href: "/writing" },
+              { icon: Mic, label: "Speaking", desc: t.skills.speakingModuleDesc, color: "from-rose-500 to-pink-600", bg: "bg-rose-500/5", border: "border-rose-500/15", href: "/speaking" },
+              { icon: Headphones, label: "Listening", desc: t.skills.listeningModuleDesc, color: "from-blue-500 to-indigo-600", bg: "bg-blue-500/5", border: "border-blue-500/15", href: "/listening" },
+              { icon: BookOpen, label: "Reading", desc: t.skills.readingModuleDesc, color: "from-emerald-500 to-teal-600", bg: "bg-emerald-500/5", border: "border-emerald-500/15", href: "/reading" },
+              { icon: PenTool, label: "Writing", desc: t.skills.writingModuleDesc, color: "from-violet-500 to-purple-600", bg: "bg-violet-500/5", border: "border-violet-500/15", href: "/writing" },
+              { icon: Trophy, label: t.skills.fullmockTitle, desc: t.skills.fullmockModuleDesc, color: "from-amber-500 to-orange-600", bg: "bg-amber-500/5", border: "border-amber-500/15", href: "/fullmock" },
+              { icon: Sparkles, label: t.skills.aiFeedbackLabel, desc: t.skills.aiFeedbackModuleDesc, color: "from-fuchsia-500 to-pink-600", bg: "bg-fuchsia-500/5", border: "border-fuchsia-500/15", href: "/writing" },
             ].map((item, i) => (
               <motion.div
                 key={item.label}
@@ -270,7 +270,7 @@ export default function Home() {
                     <h3 className="font-bold text-lg mb-1.5">{item.label}</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
                     <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                      Перейти <ArrowRight className="w-3 h-3" />
+                      {t.skills.goTo} <ArrowRight className="w-3 h-3" />
                     </div>
                   </div>
                 </Link>
@@ -293,7 +293,7 @@ export default function Home() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 items-center">
             <motion.div className="space-y-6" variants={fadeInUp} transition={{ duration: 0.7 }}>
               <Badge variant="secondary" className="px-3 py-1 text-xs font-semibold tracking-widest uppercase text-primary bg-primary/8 border border-primary/20">
-                О платформе
+                {t.about.badge}
               </Badge>
               <h2 className="text-3xl md:text-4xl font-black leading-tight" data-testid="text-about-title">
                 {t.about.title}
@@ -303,7 +303,7 @@ export default function Home() {
               <Link href="/register">
                 <Button className="gap-2 mt-2 shadow-md shadow-primary/20">
                   <GraduationCap className="w-4 h-4" />
-                  Начать бесплатно
+                  {t.about.startFree}
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
@@ -350,10 +350,10 @@ export default function Home() {
             <Trophy className="w-8 h-8 text-white" />
           </motion.div>
           <h2 className="text-3xl md:text-5xl font-black">
-            Готовы достичь <span className="gradient-text">Band 7+?</span>
+            {t.about.ctaTitle}
           </h2>
           <p className="text-muted-foreground text-lg leading-relaxed">
-            Присоединитесь к тысячам студентов, которые уже улучшили свой балл с SMART TIME Education
+            {t.about.ctaDesc}
           </p>
           <div className="flex flex-wrap justify-center gap-3 pt-2">
             <Link href="/register">

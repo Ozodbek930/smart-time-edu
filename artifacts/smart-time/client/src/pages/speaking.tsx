@@ -31,7 +31,7 @@ function useAudioRecorder() {
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const startRecording = async () => {
+  const startRecording = async (microphoneErrorMsg?: string) => {
     setError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -53,7 +53,7 @@ function useAudioRecorder() {
       setDuration(0);
       timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000);
     } catch {
-      setError("Нет доступа к микрофону. Разрешите доступ в браузере.");
+      setError(microphoneErrorMsg || "No microphone access. Allow access in your browser settings.");
     }
   };
 
@@ -88,13 +88,14 @@ function RecordingSection({
   timer: ReturnType<typeof useCountdownTimer>;
 }) {
   const { toast } = useToast();
+  const { t } = useI18n();
   const { isRecording, audioBlob, audioUrl, duration, error, startRecording, stopRecording, reset } = useAudioRecorder();
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   useEffect(() => {
     if (timer.isExpired && isRecording) {
       stopRecording();
-      toast({ title: "Время вышло! Запись остановлена.", variant: "destructive" });
+      toast({ title: t.speaking.recordingTimeout, variant: "destructive" });
     }
   }, [timer.isExpired, isRecording]);
 
@@ -119,10 +120,10 @@ function RecordingSection({
     },
     onSuccess: () => {
       setIsSubmitted(true);
-      toast({ title: "Запись отправлена преподавателю!" });
+      toast({ title: t.speaking.recordingSubmitted });
     },
     onError: () => {
-      toast({ title: "Ошибка при отправке. Попробуйте ещё раз.", variant: "destructive" });
+      toast({ title: t.speaking.submitError, variant: "destructive" });
     },
   });
 
@@ -135,7 +136,7 @@ function RecordingSection({
         data-testid={`text-recording-submitted-${test.id}`}
       >
         <CheckCircle className="w-4 h-4 shrink-0" />
-        Запись отправлена преподавателю!
+        {t.speaking.recordingSubmitted}
       </motion.div>
     );
   }
@@ -145,7 +146,7 @@ function RecordingSection({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Mic className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold text-primary">Запишите свой ответ</span>
+          <span className="text-sm font-semibold text-primary">{t.speaking.recordYourAnswer}</span>
         </div>
         {!isSubmitted && (
           <Badge 
@@ -167,13 +168,13 @@ function RecordingSection({
         <div className="flex items-center gap-3">
           {!isRecording ? (
             <Button
-              onClick={startRecording}
+              onClick={() => startRecording(t.speaking.microphoneError)}
               className="gap-2 bg-red-500 hover:bg-red-600 text-white"
               size="sm"
               data-testid={`button-start-record-${test.id}`}
             >
               <Mic className="w-4 h-4" />
-              Начать запись
+              {t.speaking.startRecording}
             </Button>
           ) : (
             <>
@@ -191,7 +192,7 @@ function RecordingSection({
                 data-testid={`button-stop-record-${test.id}`}
               >
                 <Square className="w-3 h-3 fill-current" />
-                Остановить
+                {t.speaking.stopRecording}
               </Button>
             </>
           )}
@@ -213,7 +214,7 @@ function RecordingSection({
               data-testid={`button-re-record-${test.id}`}
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              Перезаписать
+              {t.speaking.reRecord}
             </Button>
             <Button
               size="sm"
@@ -225,12 +226,12 @@ function RecordingSection({
               {submitMutation.isPending ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Отправка...
+                  {t.speaking.sending}
                 </>
               ) : (
                 <>
                   <Send className="w-3.5 h-3.5" />
-                  Отправить преподавателю
+                  {t.speaking.sendToInstructor}
                 </>
               )}
             </Button>
