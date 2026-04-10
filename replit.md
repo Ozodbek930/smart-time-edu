@@ -25,3 +25,16 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+
+## Artifacts
+
+### Smart Time Education (`artifacts/smart-time`)
+- Full IELTS preparation platform (React + Vite + Express + PostgreSQL)
+- Runs as a monolithic server (Express serves API + Vite frontend)
+- Port: 22168, Preview path: `/`
+- Dev command: `pnpm --filter @workspace/smart-time run dev` (runs `tsx server/index.ts`)
+- Admin credentials: username `admin`, password `admin123`
+- AI writing evaluation via Gemini API (requires `GEMINI_API_KEY`)
+- Email on registration via Gmail SMTP (requires `GMAIL_USER` and `GMAIL_APP_PASSWORD`)
+- DB schema: `artifacts/smart-time/shared/schema.ts` (uses its own drizzle config)
+- Run `pnpm --filter @workspace/smart-time run db:push` to sync schema changes
