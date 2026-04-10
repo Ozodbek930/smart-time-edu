@@ -69,10 +69,10 @@ function formatDur(s: number) {
 }
 
 const SECTION_COLORS: Record<string, string> = {
-  listening: "bg-blue-600",
-  reading: "bg-emerald-600",
-  writing: "bg-purple-600",
-  speaking: "bg-rose-500",
+  listening: "bg-amber-500",
+  reading: "bg-amber-500",
+  writing: "bg-amber-500",
+  speaking: "bg-amber-500",
 };
 
 const SECTION_ICONS: Record<string, JSX.Element> = {
@@ -125,8 +125,8 @@ function MockNavBar({ items, testId, onScroll }: {
               data-testid={`mock-q-${testId}-${idx + 1}`}
               className={`w-8 h-8 rounded-full text-xs font-bold transition-all duration-200 border-2 cursor-pointer shrink-0 ${
                 item.answered
-                  ? "bg-primary border-primary text-white"
-                  : "bg-muted border-border text-muted-foreground hover:border-primary hover:text-primary"
+                  ? "bg-amber-500 border-amber-500 text-white"
+                  : "bg-white border-gray-200 text-gray-500 hover:border-amber-400 hover:text-amber-600"
               }`}
             >
               {idx + 1}
@@ -309,47 +309,49 @@ function MockListeningQuiz({
         {qs.map(q => {
           if (q.type === "text") {
             return (
-              <div key={q.id} className="px-4 py-3 rounded-md bg-sky-50/70 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-800">
-                <p className="text-sm text-sky-900 dark:text-sky-200 whitespace-pre-wrap leading-relaxed">{q.question}</p>
+              <div key={q.id} className="px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
+                <p className="text-sm text-amber-900 whitespace-pre-wrap leading-relaxed">{q.question}</p>
               </div>
             );
           }
           const userAnswer = answers[q.id];
           return (
-            <div id={`mq-${testId}-${q.id}`} key={q.id} className="p-4 rounded-md border border-border scroll-mt-24" data-testid={`mq-block-${testId}-${q.id}`}>
-              <div className="flex items-start gap-2 mb-3">
-                <span className="shrink-0 w-6 h-6 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center text-xs font-bold">{qNums[q.id]}</span>
-                <p className="text-sm font-medium">{q.question}</p>
+            <div id={`mq-${testId}-${q.id}`} key={q.id} className="rounded-xl border-2 border-amber-100 bg-white overflow-hidden scroll-mt-24" data-testid={`mq-block-${testId}-${q.id}`}>
+              <div className="flex items-start gap-3 px-4 pt-4 pb-3">
+                <span className="shrink-0 w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold shadow-sm">{qNums[q.id]}</span>
+                <p className="text-sm font-medium leading-relaxed pt-0.5">{q.question}</p>
               </div>
               {isText(q.type) ? (
-                <Input
-                  placeholder={q.type === "short-answer" ? "Write your answer..." : "Fill in the blank..."}
-                  value={typeof userAnswer === "string" ? userAnswer : ""}
-                  onChange={e => setAnswer(q.id, e.target.value)}
-                  className="max-w-sm text-sm ml-8"
-                />
+                <div className="px-4 pb-4">
+                  <Input
+                    placeholder={q.type === "short-answer" ? "Write your answer..." : "Fill in the blank..."}
+                    value={typeof userAnswer === "string" ? userAnswer : ""}
+                    onChange={e => setAnswer(q.id, e.target.value)}
+                    className="max-w-sm text-sm border-amber-200 focus:border-amber-400"
+                  />
+                </div>
               ) : isMatch(q.type) ? (
-                <select
-                  value={typeof userAnswer === "number" ? userAnswer.toString() : ""}
-                  onChange={e => setAnswer(q.id, parseInt(e.target.value))}
-                  className="ml-8 w-full max-w-sm p-2.5 rounded-lg border border-border text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                >
-                  <option value="">— Select answer —</option>
-                  {q.options.map((opt, i) => <option key={i} value={i.toString()}>{opt}</option>)}
-                </select>
+                <div className="px-4 pb-4">
+                  <select
+                    value={typeof userAnswer === "number" ? userAnswer.toString() : ""}
+                    onChange={e => setAnswer(q.id, parseInt(e.target.value))}
+                    className="w-full max-w-sm p-2.5 rounded-lg border border-amber-200 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-amber-400/40 cursor-pointer hover:border-amber-400"
+                  >
+                    <option value="">— Select answer —</option>
+                    {q.options.map((opt, i) => <option key={i} value={i.toString()}>{opt}</option>)}
+                  </select>
+                </div>
               ) : (q.type === "tfng" || q.type === "ynng") ? (
-                <div className="flex gap-2 ml-8 mt-1 flex-wrap">
+                <div className="flex gap-2 px-4 pb-4 flex-wrap">
                   {(q.type === "tfng" ? ["True", "False", "Not Given"] : ["Yes", "No", "Not Given"]).map((label, optIdx) => {
                     const isSelected = userAnswer === optIdx;
-                    const colors = ["border-emerald-500 text-emerald-700", "border-red-400 text-red-600", "border-slate-400 text-slate-500"];
-                    const selBgs = ["bg-emerald-100 dark:bg-emerald-900/30", "bg-red-100 dark:bg-red-900/30", "bg-slate-100 dark:bg-slate-800"];
                     return (
                       <button
                         key={optIdx}
                         type="button"
                         onClick={() => setAnswer(q.id, optIdx)}
-                        className={`px-4 py-2 rounded-xl border-2 text-sm font-bold transition-all duration-150 ${
-                          isSelected ? `${colors[optIdx]} ${selBgs[optIdx]}` : `${colors[optIdx]} opacity-60 hover:opacity-100 cursor-pointer`
+                        className={`px-4 py-2 rounded-xl border-2 text-sm font-semibold transition-all duration-150 ${
+                          isSelected ? "border-amber-500 bg-amber-100 text-amber-800" : "border-gray-200 text-gray-600 hover:border-amber-400 hover:bg-amber-50 cursor-pointer"
                         }`}
                       >
                         {label}
@@ -358,18 +360,27 @@ function MockListeningQuiz({
                   })}
                 </div>
               ) : (
-                <RadioGroup
-                  value={userAnswer?.toString()}
-                  onValueChange={v => setAnswer(q.id, parseInt(v))}
-                  className="space-y-2 ml-8"
-                >
-                  {q.options.map((opt, optIdx) => (
-                    <div key={optIdx} className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
-                      <RadioGroupItem value={optIdx.toString()} id={`mq-${testId}-${q.id}-${optIdx}`} />
-                      <Label htmlFor={`mq-${testId}-${q.id}-${optIdx}`} className="text-sm cursor-pointer flex-1">{opt}</Label>
-                    </div>
-                  ))}
-                </RadioGroup>
+                <div className="divide-y divide-gray-100 border-t border-amber-100">
+                  {q.options.map((opt, optIdx) => {
+                    const isSelected = userAnswer === optIdx;
+                    return (
+                      <button
+                        key={optIdx}
+                        type="button"
+                        onClick={() => setAnswer(q.id, optIdx)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-all duration-150 ${
+                          isSelected ? "bg-amber-50 text-amber-900" : "hover:bg-amber-50/60 text-gray-700"
+                        }`}
+                        data-testid={`mq-opt-${testId}-${q.id}-${optIdx}`}
+                      >
+                        <span className={`shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
+                          isSelected ? "border-amber-500 bg-amber-500 text-white" : "border-gray-300 text-gray-500"
+                        }`}>{String.fromCharCode(65 + optIdx)}</span>
+                        <span className="flex-1 leading-snug">{opt}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
           );
@@ -428,47 +439,49 @@ function MockReadingQuiz({
         {qs.map(q => {
           if (q.type === "text") {
             return (
-              <div key={q.id} className="px-4 py-3 rounded-md bg-sky-50/70 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-800">
-                <p className="text-sm text-sky-900 dark:text-sky-200 whitespace-pre-wrap leading-relaxed">{q.question}</p>
+              <div key={q.id} className="px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
+                <p className="text-sm text-amber-900 whitespace-pre-wrap leading-relaxed">{q.question}</p>
               </div>
             );
           }
           const userAnswer = answers[q.id];
           return (
-            <div id={`mrq-${testId}-${q.id}`} key={q.id} className="p-4 rounded-md border border-border scroll-mt-24" data-testid={`mrq-block-${testId}-${q.id}`}>
-              <div className="flex items-start gap-2 mb-3">
-                <span className="shrink-0 w-6 h-6 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-xs font-bold">{qNums[q.id]}</span>
-                <p className="text-sm font-medium">{q.question}</p>
+            <div id={`mrq-${testId}-${q.id}`} key={q.id} className="rounded-xl border-2 border-amber-100 bg-white overflow-hidden scroll-mt-24" data-testid={`mrq-block-${testId}-${q.id}`}>
+              <div className="flex items-start gap-3 px-4 pt-4 pb-3">
+                <span className="shrink-0 w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold shadow-sm">{qNums[q.id]}</span>
+                <p className="text-sm font-medium leading-relaxed pt-0.5">{q.question}</p>
               </div>
               {isText(q.type) ? (
-                <Input
-                  placeholder={q.type === "short-answer" ? "Write your answer..." : "Fill in the blank..."}
-                  value={typeof userAnswer === "string" ? userAnswer : ""}
-                  onChange={e => setAnswer(q.id, e.target.value)}
-                  className="max-w-sm text-sm ml-8"
-                />
+                <div className="px-4 pb-4">
+                  <Input
+                    placeholder={q.type === "short-answer" ? "Write your answer..." : "Fill in the blank..."}
+                    value={typeof userAnswer === "string" ? userAnswer : ""}
+                    onChange={e => setAnswer(q.id, e.target.value)}
+                    className="max-w-sm text-sm border-amber-200 focus:border-amber-400"
+                  />
+                </div>
               ) : isMatch(q.type) ? (
-                <select
-                  value={typeof userAnswer === "number" ? userAnswer.toString() : ""}
-                  onChange={e => setAnswer(q.id, parseInt(e.target.value))}
-                  className="ml-8 w-full max-w-sm p-2.5 rounded-lg border border-border text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                >
-                  <option value="">— Select answer —</option>
-                  {q.options.map((opt, i) => <option key={i} value={i.toString()}>{opt}</option>)}
-                </select>
+                <div className="px-4 pb-4">
+                  <select
+                    value={typeof userAnswer === "number" ? userAnswer.toString() : ""}
+                    onChange={e => setAnswer(q.id, parseInt(e.target.value))}
+                    className="w-full max-w-sm p-2.5 rounded-lg border border-amber-200 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-amber-400/40 cursor-pointer hover:border-amber-400"
+                  >
+                    <option value="">— Select answer —</option>
+                    {q.options.map((opt, i) => <option key={i} value={i.toString()}>{opt}</option>)}
+                  </select>
+                </div>
               ) : (q.type === "tfng" || q.type === "ynng") ? (
-                <div className="flex gap-2 ml-8 mt-1 flex-wrap">
+                <div className="flex gap-2 px-4 pb-4 flex-wrap">
                   {(q.type === "tfng" ? ["True", "False", "Not Given"] : ["Yes", "No", "Not Given"]).map((label, optIdx) => {
                     const isSelected = userAnswer === optIdx;
-                    const colors = ["border-emerald-500 text-emerald-700", "border-red-400 text-red-600", "border-slate-400 text-slate-500"];
-                    const selBgs = ["bg-emerald-100 dark:bg-emerald-900/30", "bg-red-100 dark:bg-red-900/30", "bg-slate-100 dark:bg-slate-800"];
                     return (
                       <button
                         key={optIdx}
                         type="button"
                         onClick={() => setAnswer(q.id, optIdx)}
-                        className={`px-4 py-2 rounded-xl border-2 text-sm font-bold transition-all duration-150 ${
-                          isSelected ? `${colors[optIdx]} ${selBgs[optIdx]}` : `${colors[optIdx]} opacity-60 hover:opacity-100 cursor-pointer`
+                        className={`px-4 py-2 rounded-xl border-2 text-sm font-semibold transition-all duration-150 ${
+                          isSelected ? "border-amber-500 bg-amber-100 text-amber-800" : "border-gray-200 text-gray-600 hover:border-amber-400 hover:bg-amber-50 cursor-pointer"
                         }`}
                       >
                         {label}
@@ -477,18 +490,27 @@ function MockReadingQuiz({
                   })}
                 </div>
               ) : (
-                <RadioGroup
-                  value={userAnswer?.toString()}
-                  onValueChange={v => setAnswer(q.id, parseInt(v))}
-                  className="space-y-2 ml-8"
-                >
-                  {q.options.map((opt, optIdx) => (
-                    <div key={optIdx} className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
-                      <RadioGroupItem value={optIdx.toString()} id={`mrq-${testId}-${q.id}-${optIdx}`} />
-                      <Label htmlFor={`mrq-${testId}-${q.id}-${optIdx}`} className="text-sm cursor-pointer flex-1">{opt}</Label>
-                    </div>
-                  ))}
-                </RadioGroup>
+                <div className="divide-y divide-gray-100 border-t border-amber-100">
+                  {q.options.map((opt, optIdx) => {
+                    const isSelected = userAnswer === optIdx;
+                    return (
+                      <button
+                        key={optIdx}
+                        type="button"
+                        onClick={() => setAnswer(q.id, optIdx)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-all duration-150 ${
+                          isSelected ? "bg-amber-50 text-amber-900" : "hover:bg-amber-50/60 text-gray-700"
+                        }`}
+                        data-testid={`mrq-opt-${testId}-${q.id}-${optIdx}`}
+                      >
+                        <span className={`shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
+                          isSelected ? "border-amber-500 bg-amber-500 text-white" : "border-gray-300 text-gray-500"
+                        }`}>{String.fromCharCode(65 + optIdx)}</span>
+                        <span className="flex-1 leading-snug">{opt}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
           );
@@ -544,9 +566,9 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Sub-header with section info and timer */}
-      <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b bg-muted/30">
+      <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b bg-amber-50">
         <div className="flex items-center gap-2">
-          <Badge className="bg-blue-600 text-white gap-1 text-xs">
+          <Badge className="bg-amber-500 text-white gap-1 text-xs">
             <Headphones className="w-3 h-3" />
             {isMultiSection ? `Listening — ${(test.testSections as any[]).length} Sections` : test.section ? `Section ${test.section}` : "Listening"}
           </Badge>
@@ -569,13 +591,13 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
               const qs: ListeningQuestion[] = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
               return (
                 <div key={sIdx} className="rounded-xl border overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-600">
+                  <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-500">
                     <Headphones className="w-4 h-4 text-white" />
                     <span className="text-xs font-semibold text-white uppercase tracking-wide">Section {sIdx + 1}</span>
                   </div>
                   {sec.audioUrl && (
-                    <div className="border-b bg-blue-50/60 dark:bg-blue-950/20 px-4 py-3">
-                      <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">Audio — Listen carefully</p>
+                    <div className="border-b bg-amber-50 px-4 py-3">
+                      <p className="text-xs font-semibold text-amber-700 mb-1">Audio — Listen carefully</p>
                       <audio controls className="w-full h-9 rounded" src={sec.audioUrl} data-testid={`mock-audio-sec-${sIdx}`} />
                     </div>
                   )}
@@ -590,7 +612,7 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
               );
             })}
             <div className="flex justify-center pt-4 border-t">
-              <Button onClick={handleManualSubmit} disabled={submitMutation.isPending} className="gap-2 px-8 bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-submit-mock-section">
+              <Button onClick={handleManualSubmit} disabled={submitMutation.isPending} className="gap-2 px-8 bg-amber-500 hover:bg-amber-600 text-white" data-testid="button-submit-mock-section">
                 {submitMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</> : <><Send className="w-4 h-4" /> Submit Section</>}
               </Button>
             </div>
@@ -600,13 +622,13 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
         /* Single-section listening */
         <>
           {test.audioUrl && (
-            <div className="shrink-0 border-b bg-blue-50/60 dark:bg-blue-950/20 px-4 py-3">
+            <div className="shrink-0 border-b bg-amber-50 px-4 py-3">
               <div className="flex items-center gap-3 max-w-3xl mx-auto">
-                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center shrink-0">
                   <Headphones className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">Audio — Listen carefully</p>
+                  <p className="text-xs font-semibold text-amber-700 mb-1">Audio — Listen carefully</p>
                   <audio controls className="w-full h-9 rounded" src={test.audioUrl} data-testid={`mock-audio-${test.id}`} />
                 </div>
               </div>
@@ -619,7 +641,7 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
               )}
               {mode === "written" && (
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-purple-700 dark:text-purple-300">Listen and write your response:</p>
+                  <p className="text-sm font-medium text-amber-700">Listen and write your response:</p>
                   <Textarea
                     className="min-h-[220px] resize-none text-sm"
                     placeholder="Write your answer here..."
@@ -632,7 +654,7 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
               {mode === "mixed" && (
                 <div className="space-y-6">
                   <div>
-                    <p className="text-sm font-semibold text-purple-700 mb-2">Part 1 — Written response</p>
+                    <p className="text-sm font-semibold text-amber-700 mb-2">Part 1 — Written response</p>
                     <Textarea className="min-h-[160px] resize-none text-sm" placeholder="Write your answer here..." value={writtenText} onChange={e => setWrittenText(e.target.value)} />
                   </div>
                   {test.questions.length > 0 && (
@@ -646,7 +668,7 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
             </div>
           </div>
           <div className="shrink-0 border-t bg-background/95 backdrop-blur px-4 py-3">
-            <Button onClick={handleManualSubmit} disabled={submitMutation.isPending} className="gap-2 w-full sm:w-auto ml-auto flex bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-submit-mock-section">
+            <Button onClick={handleManualSubmit} disabled={submitMutation.isPending} className="gap-2 w-full sm:w-auto ml-auto flex bg-amber-500 hover:bg-amber-600 text-white" data-testid="button-submit-mock-section">
               {submitMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</> : <><Send className="w-4 h-4" /> Submit Section</>}
             </Button>
           </div>
@@ -701,10 +723,13 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Timer bar */}
-      <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b bg-muted/30">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          {isMultiSection ? `Reading — ${(test.testSections as any[]).length} Passages` : "Reading Passage"}
-        </span>
+      <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b bg-amber-50">
+        <div className="flex items-center gap-2">
+          <Badge className="bg-amber-500 text-white gap-1 text-xs">
+            <BookOpen className="w-3 h-3" />
+            {isMultiSection ? `Reading — ${(test.testSections as any[]).length} Passages` : "Reading Passage"}
+          </Badge>
+        </div>
         <Badge
           variant={timer.isCritical ? "destructive" : timer.isWarning ? "default" : "secondary"}
           className={`gap-1.5 py-1 px-3 font-mono font-bold ${timer.isWarning && !timer.isCritical ? "animate-pulse" : ""}`}
@@ -723,7 +748,7 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }
               const secKey = `sec-${pIdx}`;
               return (
                 <div key={secKey} className="rounded-xl border overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600">
+                  <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-500">
                     <BookOpen className="w-4 h-4 text-white" />
                     <span className="text-xs font-semibold text-white uppercase tracking-wide">Passage {pIdx + 1}</span>
                   </div>
@@ -748,7 +773,7 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }
               <Button
                 onClick={handleManualSubmit}
                 disabled={submitMutation.isPending}
-                className="gap-2 px-8 bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="gap-2 px-8 bg-amber-500 hover:bg-amber-600 text-white"
                 data-testid="button-submit-mock-section"
               >
                 {submitMutation.isPending
@@ -763,7 +788,7 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }
         <>
           <div className="flex-1 flex overflow-hidden">
             <div className="w-1/2 overflow-y-auto p-4 md:p-6 border-r">
-              <h4 className="text-xs font-semibold text-emerald-600 uppercase tracking-wide mb-3">Reading Passage</h4>
+              <h4 className="text-xs font-semibold text-amber-600 uppercase tracking-wide mb-3">Reading Passage</h4>
               <HighlightablePassage passage={test.passage} testId={test.id} />
             </div>
             <div className="w-1/2 flex flex-col min-h-0">
@@ -793,7 +818,7 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }
             <Button
               onClick={handleManualSubmit}
               disabled={submitMutation.isPending}
-              className="gap-2 w-full sm:w-auto ml-auto flex bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="gap-2 w-full sm:w-auto ml-auto flex bg-amber-500 hover:bg-amber-600 text-white"
               data-testid="button-submit-mock-section"
             >
               {submitMutation.isPending
@@ -876,9 +901,9 @@ function WritingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Sub-header with task info and timer */}
-      <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b bg-muted/30">
+      <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b bg-amber-50">
         <div className="flex items-center gap-2">
-          <Badge className="bg-purple-600 text-white text-xs">Task {test.task}</Badge>
+          <Badge className="bg-amber-500 text-white text-xs">Task {test.task}</Badge>
           <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-[200px]">{test.title}</span>
         </div>
         <Badge
@@ -895,7 +920,7 @@ function WritingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }
 
         {/* LEFT: Task description */}
         <div className="w-2/5 flex flex-col overflow-hidden border-r">
-          <div className="shrink-0 px-4 py-2.5 border-b bg-purple-600">
+          <div className="shrink-0 px-4 py-2.5 border-b bg-amber-500">
             <p className="text-xs font-semibold text-white uppercase tracking-wide">
               Writing Task {test.task}
             </p>
@@ -986,7 +1011,7 @@ function WritingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }
         <Button
           onClick={handleManualSubmit}
           disabled={!response.trim() || submitMutation.isPending}
-          className="gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+          className="gap-2 bg-amber-500 hover:bg-amber-600 text-white"
           data-testid="button-submit-mock-section"
         >
           {submitMutation.isPending

@@ -60,8 +60,8 @@ function QuizDisplay({
       {qs.map((q, idx) => {
         if (q.type === "text") {
           return (
-            <div key={q.id} id={`q-nav-${testId}-${q.id}`} className="px-4 py-3 rounded-md bg-sky-50/70 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-800">
-              <p className="text-sm text-sky-900 dark:text-sky-200 whitespace-pre-wrap leading-relaxed">{q.question}</p>
+            <div key={q.id} id={`q-nav-${testId}-${q.id}`} className="px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
+              <p className="text-sm text-amber-900 whitespace-pre-wrap leading-relaxed">{q.question}</p>
             </div>
           );
         }
@@ -73,66 +73,64 @@ function QuizDisplay({
           <div
             key={q.id}
             id={`q-nav-${testId}-${q.id}`}
-            className={`p-4 rounded-md border transition-colors ${isCorrect ? "border-green-300 dark:border-green-700 bg-green-50/50 dark:bg-green-900/10" : isWrong ? "border-red-300 dark:border-red-700 bg-red-50/50 dark:bg-red-900/10" : "border-border"}`}
+            className={`rounded-xl border-2 transition-colors overflow-hidden ${isCorrect ? "border-green-400 bg-green-50/40" : isWrong ? "border-red-300 bg-red-50/30" : "border-amber-100 bg-white"}`}
             data-testid={`question-block-${testId}-${q.id}`}
           >
-            <div className="flex items-start gap-2 mb-3">
-              <span className="shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">{qNums[q.id]}</span>
-              <p className="text-sm font-medium" data-testid={`text-listening-question-${testId}-${q.id}`}>{q.question}</p>
+            <div className="flex items-start gap-3 px-4 pt-4 pb-3">
+              <span className="shrink-0 w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold shadow-sm">{qNums[q.id]}</span>
+              <p className="text-sm font-medium leading-relaxed pt-0.5" data-testid={`text-listening-question-${testId}-${q.id}`}>{q.question}</p>
             </div>
 
             {isTextType(q.type) ? (
-              <div className="ml-8 space-y-1.5">
+              <div className="px-4 pb-4 space-y-1.5">
                 <Input
                   placeholder={q.type === "short-answer" ? "Write your answer..." : "Fill in the blank..."}
                   value={typeof userAnswer === "string" ? userAnswer : ""}
                   onChange={(e) => onAnswer(q.id, e.target.value, true)}
                   disabled={submitted}
                   data-testid={`input-answer-${testId}-${q.id}`}
-                  className={`max-w-sm text-sm ${submitted ? (isCorrect ? "border-green-500 bg-green-50 dark:bg-green-900/20" : isWrong ? "border-red-500 bg-red-50 dark:bg-red-900/20" : "") : ""}`}
+                  className={`max-w-sm text-sm ${submitted ? (isCorrect ? "border-green-500 bg-green-50" : isWrong ? "border-red-500 bg-red-50" : "") : ""}`}
                 />
                 {submitted && (
                   <p className="text-xs flex items-center gap-1 text-muted-foreground">
-                    {isCorrect ? <CheckCircle className="w-3.5 h-3.5 text-green-600 dark:text-green-400 shrink-0" /> : <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />}
-                    {isWrong && <>Correct: <span className="font-semibold text-green-700 dark:text-green-400">{String(q.correctAnswer)}</span></>}
-                    {isCorrect && <span className="text-green-700 dark:text-green-400">Correct!</span>}
+                    {isCorrect ? <CheckCircle className="w-3.5 h-3.5 text-green-600 shrink-0" /> : <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />}
+                    {isWrong && <>Correct: <span className="font-semibold text-green-700">{String(q.correctAnswer)}</span></>}
+                    {isCorrect && <span className="text-green-700">Correct!</span>}
                   </p>
                 )}
               </div>
             ) : isMatchType(q.type) ? (
-              <div className="ml-8 space-y-1.5">
+              <div className="px-4 pb-4 space-y-1.5">
                 <select
                   value={typeof userAnswer === "number" ? userAnswer.toString() : ""}
                   onChange={(e) => !submitted && onAnswer(q.id, e.target.value)}
                   disabled={submitted}
                   data-testid={`select-answer-${testId}-${q.id}`}
-                  className={`w-full max-w-sm p-2.5 rounded-lg border text-sm bg-background transition-colors focus:outline-none focus:ring-2 focus:ring-ring ${submitted ? (isCorrect ? "border-green-500 bg-green-50 dark:bg-green-900/20" : isWrong ? "border-red-500 bg-red-50 dark:bg-red-900/20" : "border-border") : "border-border cursor-pointer"}`}
+                  className={`w-full max-w-sm p-2.5 rounded-lg border text-sm bg-background transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400/40 ${submitted ? (isCorrect ? "border-green-500 bg-green-50" : isWrong ? "border-red-500 bg-red-50" : "border-border") : "border-amber-200 cursor-pointer hover:border-amber-400"}`}
                 >
                   <option value="">— Select answer —</option>
                   {q.options.map((opt, i) => <option key={i} value={i.toString()}>{opt}</option>)}
                 </select>
                 {submitted && isWrong && (
                   <p className="text-xs flex items-center gap-1 text-muted-foreground">
-                    <CheckCircle className="w-3.5 h-3.5 text-green-600 dark:text-green-400 shrink-0" />
-                    Correct: <span className="font-semibold text-green-700 dark:text-green-400">{q.options[q.correctAnswer as number]}</span>
+                    <CheckCircle className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                    Correct: <span className="font-semibold text-green-700">{q.options[q.correctAnswer as number]}</span>
                   </p>
                 )}
               </div>
             ) : (q.type === "tfng" || q.type === "ynng") ? (
-              <div className="flex gap-2 ml-8 mt-1 flex-wrap">
+              <div className="flex gap-2 px-4 pb-4 mt-1 flex-wrap">
                 {(q.type === "tfng" ? ["True", "False", "Not Given"] : ["Yes", "No", "Not Given"]).map((label, optIdx) => {
                   const isSelected = userAnswer === optIdx;
                   const isThisCorrect = submitted && optIdx === q.correctAnswer;
                   const isThisWrong = submitted && isSelected && optIdx !== q.correctAnswer;
                   const isCorrectUnselected = submitted && optIdx === q.correctAnswer && !isSelected;
-                  const colors = ["border-emerald-500 text-emerald-700 dark:text-emerald-400", "border-red-400 text-red-600 dark:text-red-400", "border-slate-400 text-slate-500 dark:text-slate-400"];
-                  const selBgs = ["bg-emerald-100 dark:bg-emerald-900/30", "bg-red-100 dark:bg-red-900/30", "bg-slate-100 dark:bg-slate-800/50"];
-                  let cls = "flex items-center gap-1.5 px-4 py-2 rounded-xl border-2 text-sm font-bold transition-all duration-200 ";
+                  let cls = "flex items-center gap-1.5 px-4 py-2 rounded-xl border-2 text-sm font-semibold transition-all duration-200 ";
                   if (isThisCorrect) cls += "bg-green-500 border-green-500 text-white";
                   else if (isThisWrong) cls += "bg-red-500 border-red-500 text-white";
-                  else if (isCorrectUnselected) cls += "border-green-500 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20";
-                  else if (isSelected) cls += `${colors[optIdx]} ${selBgs[optIdx]}`;
-                  else cls += `${colors[optIdx]} opacity-60 hover:opacity-100 cursor-pointer`;
+                  else if (isCorrectUnselected) cls += "border-green-500 text-green-700 bg-green-50";
+                  else if (isSelected) cls += "border-amber-500 bg-amber-100 text-amber-800";
+                  else cls += "border-gray-200 text-gray-600 hover:border-amber-400 hover:bg-amber-50 cursor-pointer";
                   return (
                     <button key={optIdx} type="button" onClick={() => !submitted && onAnswer(q.id, optIdx.toString())} data-testid={`tfng-option-${testId}-${q.id}-${optIdx}`} className={cls}>
                       {label}
@@ -144,22 +142,38 @@ function QuizDisplay({
                 })}
               </div>
             ) : (
-              <RadioGroup value={userAnswer?.toString()} onValueChange={(value) => onAnswer(q.id, value)} className="space-y-2 ml-8">
+              <div className="divide-y divide-gray-100 border-t border-amber-100">
                 {q.options.map((option, optIdx) => {
                   const isThisCorrect = submitted && optIdx === q.correctAnswer;
                   const isThisWrong = submitted && optIdx === (userAnswer as number) && optIdx !== q.correctAnswer;
+                  const isSelected = userAnswer === optIdx;
+                  let rowCls = "flex items-center gap-3 px-4 py-3 text-sm cursor-pointer transition-all duration-150 ";
+                  if (isThisCorrect) rowCls += "bg-green-50 text-green-800";
+                  else if (isThisWrong) rowCls += "bg-red-50 text-red-800";
+                  else if (isSelected) rowCls += "bg-amber-50 text-amber-900";
+                  else rowCls += "hover:bg-amber-50/60 text-gray-700";
+                  const letterCls = `shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
+                    isThisCorrect ? "border-green-500 bg-green-500 text-white" :
+                    isThisWrong ? "border-red-500 bg-red-500 text-white" :
+                    isSelected ? "border-amber-500 bg-amber-500 text-white" :
+                    "border-gray-300 text-gray-500"
+                  }`;
                   return (
-                    <div key={optIdx} className={`flex items-center gap-2 p-2 rounded-md transition-colors ${isThisCorrect ? "bg-green-100/60 dark:bg-green-900/20" : isThisWrong ? "bg-red-100/60 dark:bg-red-900/20" : ""}`}>
-                      <RadioGroupItem value={optIdx.toString()} id={`q-${testId}-${q.id}-${optIdx}`} disabled={submitted} data-testid={`radio-option-${testId}-${q.id}-${optIdx}`} />
-                      <Label htmlFor={`q-${testId}-${q.id}-${optIdx}`} className="text-sm cursor-pointer flex items-center gap-2 flex-1">
-                        {option}
-                        {isThisCorrect && <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />}
-                        {isThisWrong && <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />}
-                      </Label>
-                    </div>
+                    <button
+                      key={optIdx}
+                      type="button"
+                      className={rowCls}
+                      onClick={() => !submitted && onAnswer(q.id, optIdx.toString())}
+                      data-testid={`radio-option-${testId}-${q.id}-${optIdx}`}
+                    >
+                      <span className={letterCls}>{String.fromCharCode(65 + optIdx)}</span>
+                      <span className="flex-1 text-left leading-snug">{option}</span>
+                      {isThisCorrect && <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />}
+                      {isThisWrong && <XCircle className="w-4 h-4 text-red-600 shrink-0" />}
+                    </button>
                   );
                 })}
-              </RadioGroup>
+              </div>
             )}
           </div>
         );
@@ -355,9 +369,9 @@ function ListeningTestCard({ test, index }: { test: ListeningTest; index: number
             transition={{ duration: 0.2 }}
             data-testid={`fullscreen-${test.id}`}
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur shrink-0 gap-4">
+            <div className="flex items-center justify-between px-4 py-3 border-b bg-amber-50 shrink-0 gap-4">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-md bg-amber-500 flex items-center justify-center shrink-0">
                   <Headphones className="w-4 h-4 text-white" />
                 </div>
                 <div className="min-w-0">
@@ -416,7 +430,7 @@ function ListeningTestCard({ test, index }: { test: ListeningTest; index: number
                 {!submitted && mode !== "written" && (
                   <Button
                     size="sm"
-                    className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="gap-1.5 bg-amber-500 hover:bg-amber-600 text-white"
                     onClick={handleManualSubmit}
                     disabled={submitMutation.isPending}
                     data-testid={`button-submit-exam-${test.id}`}
@@ -439,10 +453,10 @@ function ListeningTestCard({ test, index }: { test: ListeningTest; index: number
             <div className="flex-1 overflow-y-auto">
               <div className="max-w-3xl mx-auto px-4 py-6 pb-28">
                 {test.audioUrl && (
-                  <div className="p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 mb-5">
+                  <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 mb-5">
                     <div className="flex items-center gap-2 mb-2">
-                      <Headphones className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-700 dark:text-blue-400">{t.listening.audioLabel || "Listen to the audio"}</span>
+                      <Headphones className="w-4 h-4 text-amber-600" />
+                      <span className="text-sm font-medium text-amber-700">{t.listening.audioLabel || "Listen to the audio"}</span>
                     </div>
                     <audio controls className="w-full rounded-lg" src={test.audioUrl} data-testid={`audio-player-${test.id}`}>
                       Your browser does not support audio playback.
@@ -506,7 +520,7 @@ function ListeningTestCard({ test, index }: { test: ListeningTest; index: number
                       const wrong = submitted && answers[q.id] !== undefined && !correct;
                       let cls = "w-8 h-8 rounded-full text-xs font-bold transition-all duration-200 border-2 cursor-pointer shrink-0 ";
                       if (submitted) cls += correct ? "bg-green-500 border-green-500 text-white" : wrong ? "bg-red-500 border-red-500 text-white" : "bg-muted border-border text-muted-foreground";
-                      else cls += answered ? "bg-green-500 border-green-500 text-white" : "bg-muted border-border text-muted-foreground hover:border-primary hover:text-primary";
+                      else cls += answered ? "bg-amber-500 border-amber-500 text-white" : "bg-white border-gray-200 text-gray-500 hover:border-amber-400 hover:text-amber-600";
                       return (
                         <button
                           key={q.id}
