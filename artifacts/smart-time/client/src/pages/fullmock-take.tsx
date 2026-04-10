@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import {
   Trophy, ArrowRight, ArrowLeft, CheckCircle, Headphones, Mic, BookOpen, PenTool,
   Loader2, Send, Clock, X, PenLine, Layers, Square, AlertTriangle,
-  ChevronRight, Shield, Timer, Lock, Pencil
+  ChevronRight, Shield, Timer, Lock, Pencil, Highlighter, NotebookPen
 } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
@@ -22,7 +22,7 @@ import type {
   FullMockTest, SpeakingTest, ListeningTest, ReadingTest, WritingTest,
   ListeningQuestion, ReadingQuestion
 } from "@shared/schema";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, MutableRefObject } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -525,11 +525,12 @@ function MockReadingQuiz({
 // Listening Section Exam
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }: {
+function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, submitRef }: {
   test: ListeningTest;
   onSubmitted: () => void;
   initialSeconds?: number;
   onTimerChange?: (remaining: number) => void;
+  submitRef?: MutableRefObject<(() => void) | null>;
 }) {
   const { toast } = useToast();
   const [answers, setAnswers] = useState<Record<number, number | string>>({});
@@ -563,79 +564,87 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
     submitMutation.mutate();
   };
 
+  useEffect(() => {
+    if (submitRef) submitRef.current = handleManualSubmit;
+  });
+
+  // Build part info for breadcrumb
+  const sections = isMultiSection ? (test.testSections as any[]) : [{ questions: test.questions, audioUrl: test.audioUrl }];
+  let globalN = 0;
+  const partRanges = sections.map((sec: any) => {
+    const qs = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
+    const real = qs.filter((q: any) => q.type !== "text");
+    const start = globalN + 1;
+    globalN += real.length;
+    return { start, end: globalN };
+  });
+
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* Sub-header with section info and timer */}
-      <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b bg-blue-50">
-        <div className="flex items-center gap-2">
-          <Badge className="bg-blue-600 text-white gap-1 text-xs">
-            <Headphones className="w-3 h-3" />
-            {isMultiSection ? `Listening — ${(test.testSections as any[]).length} Sections` : test.section ? `Section ${test.section}` : "Listening"}
-          </Badge>
-          <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-[200px]">{test.topic}</span>
-        </div>
-        <Badge
-          variant={timer.isCritical ? "destructive" : timer.isWarning ? "default" : "secondary"}
-          className={`gap-1.5 py-1 px-3 font-mono font-bold ${timer.isWarning && !timer.isCritical ? "animate-pulse" : ""}`}
-          data-testid="mock-listening-timer"
-        >
-          <Clock className="w-3.5 h-3.5" />{timer.formattedTime}
-        </Badge>
-      </div>
-
       {isMultiSection ? (
-        /* Multi-section: stack all sections */
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-4 py-6 space-y-8 pb-24">
+        /* Multi-section: SmartCEFR style — breadcrumb + part heading per section */
+        <div className="flex-1 overflow-y-auto bg-white">
+          <div className="max-w-2xl mx-auto px-6 pb-10 space-y-10">
             {(test.testSections as any[]).map((sec: any, sIdx: number) => {
               const qs: ListeningQuestion[] = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
+              const range = partRanges[sIdx] || { start: 1, end: qs.length };
               return (
-                <div key={sIdx} className="rounded-xl border overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-600">
-                    <Headphones className="w-4 h-4 text-white" />
-                    <span className="text-xs font-semibold text-white uppercase tracking-wide">Section {sIdx + 1}</span>
+                <div key={sIdx} className="space-y-4 pt-6">
+                  {/* Breadcrumb */}
+                  <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                    <span className="uppercase tracking-widest font-semibold">Listening</span>
+                    <ChevronRight className="w-3 h-3" />
+                    <span className="text-gray-600 font-medium">Part {sIdx + 1} ({range.start}–{range.end})</span>
                   </div>
+                  {/* Part heading */}
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Part {sIdx + 1} <span className="text-gray-400 font-normal text-base">Questions {range.start}–{range.end}</span>
+                  </h2>
+                  {/* Audio */}
                   {sec.audioUrl && (
-                    <div className="border-b bg-blue-50 px-4 py-3">
-                      <p className="text-xs font-semibold text-blue-700 mb-1">Audio — Listen carefully</p>
+                    <div className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-3">
+                      <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Audio</p>
                       <audio controls className="w-full h-9 rounded" src={sec.audioUrl} data-testid={`mock-audio-sec-${sIdx}`} />
                     </div>
                   )}
-                  <div className="p-4">
-                    <MockListeningQuiz
-                      questions={qs}
-                      testId={`${test.id}-s${sIdx}`}
-                      onAnswersChange={secAnswers => setAnswers(prev => ({ ...prev, ...secAnswers }))}
-                    />
-                  </div>
+                  {/* Questions */}
+                  <MockListeningQuiz
+                    questions={qs}
+                    testId={`${test.id}-s${sIdx}`}
+                    onAnswersChange={secAnswers => setAnswers(prev => ({ ...prev, ...secAnswers }))}
+                  />
                 </div>
               );
             })}
-            <div className="flex justify-center pt-4 border-t">
-              <Button onClick={handleManualSubmit} disabled={submitMutation.isPending} className="gap-2 px-8 bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-submit-mock-section">
-                {submitMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</> : <><Send className="w-4 h-4" /> Submit Section</>}
-              </Button>
-            </div>
           </div>
         </div>
       ) : (
         /* Single-section listening */
         <>
+          {/* Breadcrumb + Part heading */}
+          <div className="shrink-0 px-6 pt-5 pb-0 bg-white">
+            <div className="max-w-2xl mx-auto space-y-1">
+              <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                <span className="uppercase tracking-widest font-semibold">Listening</span>
+                <ChevronRight className="w-3 h-3" />
+                <span className="text-gray-600 font-medium">Part 1 (1–{partRanges[0]?.end || "?"})</span>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">
+                Part 1 <span className="text-gray-400 font-normal text-base">Questions 1–{partRanges[0]?.end || "?"}</span>
+              </h2>
+            </div>
+          </div>
+          {/* Audio */}
           {test.audioUrl && (
-            <div className="shrink-0 border-b bg-blue-50 px-4 py-3">
-              <div className="flex items-center gap-3 max-w-3xl mx-auto">
-                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
-                  <Headphones className="w-4 h-4 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-blue-700 mb-1">Audio — Listen carefully</p>
-                  <audio controls className="w-full h-9 rounded" src={test.audioUrl} data-testid={`mock-audio-${test.id}`} />
-                </div>
+            <div className="shrink-0 px-6 py-3 bg-white">
+              <div className="max-w-2xl mx-auto rounded-xl bg-gray-50 border border-gray-200 px-4 py-3">
+                <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Audio — Listen carefully</p>
+                <audio controls className="w-full h-9 rounded" src={test.audioUrl} data-testid={`mock-audio-${test.id}`} />
               </div>
             </div>
           )}
-          <div className="flex-1 overflow-y-auto">
-            <div className="max-w-3xl mx-auto px-4 py-5 space-y-5">
+          <div className="flex-1 overflow-y-auto bg-white">
+            <div className="max-w-2xl mx-auto px-6 py-5 space-y-5">
               {mode === "test" && test.questions.length > 0 && (
                 <MockListeningQuiz questions={test.questions} testId={test.id} onAnswersChange={setAnswers} />
               )}
@@ -667,11 +676,6 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
               )}
             </div>
           </div>
-          <div className="shrink-0 border-t bg-background/95 backdrop-blur px-4 py-3">
-            <Button onClick={handleManualSubmit} disabled={submitMutation.isPending} className="gap-2 w-full sm:w-auto ml-auto flex bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-submit-mock-section">
-              {submitMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</> : <><Send className="w-4 h-4" /> Submit Section</>}
-            </Button>
-          </div>
         </>
       )}
     </div>
@@ -682,11 +686,12 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
 // Reading Section Exam — two-column layout
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }: {
+function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, submitRef }: {
   test: ReadingTest;
   onSubmitted: () => void;
   initialSeconds?: number;
   onTimerChange?: (remaining: number) => void;
+  submitRef?: MutableRefObject<(() => void) | null>;
 }) {
   const { toast } = useToast();
   const [answers, setAnswers] = useState<Record<number, number | string>>({});
@@ -716,41 +721,45 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }
     submitMutation.mutate();
   };
 
+  useEffect(() => {
+    if (submitRef) submitRef.current = handleManualSubmit;
+  });
+
   const mode = (test.mode as string) || "test";
   const [writtenText, setWrittenText] = useState("");
   const isMultiSection = (test.testSections as any[])?.length > 0;
 
-  return (
-    <div className="flex flex-col h-full min-h-0">
-      {/* Timer bar */}
-      <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b bg-blue-50">
-        <div className="flex items-center gap-2">
-          <Badge className="bg-blue-600 text-white gap-1 text-xs">
-            <BookOpen className="w-3 h-3" />
-            {isMultiSection ? `Reading — ${(test.testSections as any[]).length} Passages` : "Reading Passage"}
-          </Badge>
-        </div>
-        <Badge
-          variant={timer.isCritical ? "destructive" : timer.isWarning ? "default" : "secondary"}
-          className={`gap-1.5 py-1 px-3 font-mono font-bold ${timer.isWarning && !timer.isCritical ? "animate-pulse" : ""}`}
-          data-testid="mock-reading-timer"
-        >
-          <Clock className="w-3.5 h-3.5" />{timer.formattedTime}
-        </Badge>
-      </div>
+  // Build question ranges per section for breadcrumb
+  let globalRN = 0;
+  const readingPartRanges = (isMultiSection ? (test.testSections as any[]) : [{ questions: test.questions }]).map((sec: any) => {
+    const qs = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
+    const real = qs.filter((q: any) => q.type !== "text");
+    const start = globalRN + 1;
+    globalRN += real.length;
+    return { start, end: globalRN };
+  });
 
+  return (
+    <div className="flex flex-col h-full min-h-0 bg-white">
       {isMultiSection ? (
-        /* Multi-section: continuous scroll of all passages */
+        /* Multi-section: SmartCEFR style per passage */
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-4 py-6 space-y-8 pb-24">
+          <div className="space-y-0">
             {(test.testSections as any[]).map((sec: any, pIdx: number) => {
               const qs: ReadingQuestion[] = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
-              const secKey = `sec-${pIdx}`;
+              const range = readingPartRanges[pIdx] || { start: 1, end: qs.length };
               return (
-                <div key={secKey} className="rounded-xl border overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-600">
-                    <BookOpen className="w-4 h-4 text-white" />
-                    <span className="text-xs font-semibold text-white uppercase tracking-wide">Passage {pIdx + 1}</span>
+                <div key={pIdx} className="border-b">
+                  {/* Breadcrumb + heading */}
+                  <div className="px-6 pt-5 pb-3 bg-white">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
+                      <span className="uppercase tracking-widest font-semibold">Reading</span>
+                      <ChevronRight className="w-3 h-3" />
+                      <span className="text-gray-600 font-medium">Passage {pIdx + 1} ({range.start}–{range.end})</span>
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Passage {pIdx + 1} <span className="text-gray-400 font-normal text-base">Questions {range.start}–{range.end}</span>
+                    </h2>
                   </div>
                   <div className="flex min-h-[350px]">
                     <div className="w-1/2 border-r p-4 md:p-6 overflow-auto max-h-[65vh]">
@@ -769,26 +778,24 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }
                 </div>
               );
             })}
-            <div className="flex justify-center pt-4 border-t">
-              <Button
-                onClick={handleManualSubmit}
-                disabled={submitMutation.isPending}
-                className="gap-2 px-8 bg-blue-600 hover:bg-blue-700 text-white"
-                data-testid="button-submit-mock-section"
-              >
-                {submitMutation.isPending
-                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
-                  : <><Send className="w-4 h-4" /> Submit Section</>}
-              </Button>
-            </div>
           </div>
         </div>
       ) : (
         /* Single passage: two-column layout */
         <>
+          {/* Breadcrumb + heading */}
+          <div className="shrink-0 px-6 pt-5 pb-3 bg-white border-b">
+            <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
+              <span className="uppercase tracking-widest font-semibold">Reading</span>
+              <ChevronRight className="w-3 h-3" />
+              <span className="text-gray-600 font-medium">Passage 1 (1–{readingPartRanges[0]?.end || "?"})</span>
+            </div>
+            <h2 className="text-xl font-bold text-gray-900">
+              Passage 1 <span className="text-gray-400 font-normal text-base">Questions 1–{readingPartRanges[0]?.end || "?"}</span>
+            </h2>
+          </div>
           <div className="flex-1 flex overflow-hidden">
             <div className="w-1/2 overflow-y-auto p-4 md:p-6 border-r">
-              <h4 className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-3">Reading Passage</h4>
               <HighlightablePassage passage={test.passage} testId={test.id} />
             </div>
             <div className="w-1/2 flex flex-col min-h-0">
@@ -814,18 +821,6 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }
               )}
             </div>
           </div>
-          <div className="shrink-0 border-t bg-background/95 backdrop-blur px-4 py-3">
-            <Button
-              onClick={handleManualSubmit}
-              disabled={submitMutation.isPending}
-              className="gap-2 w-full sm:w-auto ml-auto flex bg-blue-600 hover:bg-blue-700 text-white"
-              data-testid="button-submit-mock-section"
-            >
-              {submitMutation.isPending
-                ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
-                : <><Send className="w-4 h-4" /> Submit Section</>}
-            </Button>
-          </div>
         </>
       )}
     </div>
@@ -836,11 +831,12 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }
 // Writing Section Exam — IELTS CD split-panel (task left, editor right)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function WritingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }: {
+function WritingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, submitRef }: {
   test: WritingTest;
   onSubmitted: () => void;
   initialSeconds?: number;
   onTimerChange?: (remaining: number) => void;
+  submitRef?: MutableRefObject<(() => void) | null>;
 }) {
   const { toast } = useToast();
   const [response, setResponse] = useState("");
@@ -874,6 +870,10 @@ function WritingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }
     submitMutation.mutate();
   };
 
+  useEffect(() => {
+    if (submitRef) submitRef.current = handleManualSubmit;
+  });
+
   const execCmd = (cmd: string) => {
     const ta = textareaRef.current;
     if (!ta) return;
@@ -899,22 +899,7 @@ function WritingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }
   };
 
   return (
-    <div className="flex flex-col h-full min-h-0">
-      {/* Sub-header with task info and timer */}
-      <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b bg-blue-50">
-        <div className="flex items-center gap-2">
-          <Badge className="bg-blue-600 text-white text-xs">Task {test.task}</Badge>
-          <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-[200px]">{test.title}</span>
-        </div>
-        <Badge
-          variant={timer.isCritical ? "destructive" : timer.isWarning ? "default" : "secondary"}
-          className={`gap-1.5 py-1 px-3 font-mono font-bold ${timer.isWarning && !timer.isCritical ? "animate-pulse" : ""}`}
-          data-testid="mock-writing-timer"
-        >
-          <Clock className="w-3.5 h-3.5" />{timer.formattedTime}
-        </Badge>
-      </div>
-
+    <div className="flex flex-col h-full min-h-0 bg-white">
       {/* IELTS CD Split Layout: task on left, editor on right */}
       <div className="flex-1 flex overflow-hidden">
 
@@ -996,28 +981,17 @@ function WritingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }
         </div>
       </div>
 
-      {/* Submit bar */}
-      <div className="shrink-0 border-t bg-background/95 backdrop-blur px-4 py-3 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <span className={`text-sm font-semibold tabular-nums ${
-            wordCount < minWords ? "text-amber-600" : "text-green-600"
-          }`}>
-            {wordCount} words
-          </span>
-          {wordCount < minWords && (
-            <span className="text-xs text-muted-foreground">(need {minWords - wordCount} more)</span>
-          )}
-        </div>
-        <Button
-          onClick={handleManualSubmit}
-          disabled={!response.trim() || submitMutation.isPending}
-          className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-          data-testid="button-submit-mock-section"
-        >
-          {submitMutation.isPending
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
-            : <><Send className="w-4 h-4" /> Submit Essay</>}
-        </Button>
+      {/* Word count bar */}
+      <div className="shrink-0 border-t bg-white px-4 py-2 flex items-center gap-2">
+        <span className={`text-sm font-semibold tabular-nums ${
+          wordCount === 0 ? "text-gray-400" :
+          wordCount < minWords ? "text-amber-600" : "text-green-600"
+        }`}>
+          {wordCount} / {minWords}+ words
+        </span>
+        {wordCount < minWords && wordCount > 0 && (
+          <span className="text-xs text-gray-400">({minWords - wordCount} more needed)</span>
+        )}
       </div>
     </div>
   );
@@ -1170,8 +1144,19 @@ export function FullMockSection() {
   const step = parseInt(stepStr ?? "0", 10);
   const [sectionDone, setSectionDone] = useState(false);
   const sectionRemainingRef = useRef<number>(0);
+  const [timerDisplay, setTimerDisplay] = useState("--:--");
+  const [isTimerCritical, setIsTimerCritical] = useState(false);
+  const [isTimerWarning, setIsTimerWarning] = useState(false);
+  const [submitPending, setSubmitPending] = useState(false);
+  const sectionSubmitRef = useRef<(() => void) | null>(null);
 
-  useEffect(() => { setSectionDone(false); }, [step]);
+  useEffect(() => {
+    setSectionDone(false);
+    setTimerDisplay("--:--");
+    setIsTimerCritical(false);
+    setIsTimerWarning(false);
+    sectionSubmitRef.current = null;
+  }, [step]);
 
   const { data: fullMock, isLoading: loadingMock } = useQuery<FullMockTest>({
     queryKey: ["/api/fullmock-tests"],
@@ -1245,6 +1230,16 @@ export function FullMockSection() {
     }
   };
 
+  // Unique section types in order — must be BEFORE early return (Rules of Hooks)
+  const uniqueTypes = useMemo(() => {
+    const seen = new Set<string>();
+    const types: string[] = [];
+    for (const s of activeSections) {
+      if (!seen.has(s.type)) { seen.add(s.type); types.push(s.type); }
+    }
+    return types;
+  }, [activeSections]);
+
   if (loadingMock || !fullMock) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -1256,16 +1251,6 @@ export function FullMockSection() {
   const sectionLabel = currentSection
     ? getSectionLabel(currentSection.type, currentSection.sectionIndex)
     : "";
-
-  // Unique section types in order
-  const uniqueTypes = useMemo(() => {
-    const seen = new Set<string>();
-    const types: string[] = [];
-    for (const s of activeSections) {
-      if (!seen.has(s.type)) { seen.add(s.type); types.push(s.type); }
-    }
-    return types;
-  }, [activeSections]);
 
   const getSectionTypeIcon = (type: string, active: boolean) => {
     const cls = `w-3.5 h-3.5 ${active ? "text-white" : "text-gray-500"}`;
@@ -1280,23 +1265,35 @@ export function FullMockSection() {
     return activeSections.filter(s => s.type === type).reduce((sum, s) => sum + (((s.testData as any)?.duration) || 0), 0);
   };
 
+  // Compute question count for each section
+  const getQCount = (section: typeof activeSections[0]): number => {
+    const td = section.testData as any;
+    if (!td) return 0;
+    const secs = td.testSections?.length > 0 ? td.testSections : [{ questions: td.questions || [] }];
+    return secs.reduce((s: number, sec: any) => {
+      const qs = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
+      return s + qs.filter((q: any) => q.type !== "text").length;
+    }, 0);
+  };
+  const totalQs = activeSections.filter(s => s.type !== "speaking").reduce((s, sec) => s + getQCount(sec), 0);
+
   return (
     <div
       className="fixed inset-0 z-50 bg-gray-50 flex flex-col overflow-hidden"
       data-testid="fullmock-exam-container"
     >
       {/* ── SmartCEFR-style Top Bar ──────────────────────────────── */}
-      <div className="flex items-center px-4 py-2.5 border-b bg-white shrink-0 gap-3">
+      <div className="flex items-center px-4 py-2 border-b bg-white shrink-0 gap-2">
         {/* Logo */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-            <Trophy className="w-4 h-4 text-white" />
+        <div className="flex items-center gap-2 shrink-0 min-w-[110px]">
+          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
+            <Trophy className="w-3.5 h-3.5 text-white" />
           </div>
           <span className="font-bold text-sm text-gray-900 hidden sm:block">Smart Time</span>
         </div>
 
         {/* Section TYPE tabs */}
-        <div className="flex items-center gap-1 flex-1 justify-center overflow-x-auto px-2">
+        <div className="flex items-center gap-0.5 flex-1 justify-center overflow-x-auto">
           {uniqueTypes.map(type => {
             const isCurrent = currentSection?.type === type;
             const totalMin = getTypeTotalDuration(type);
@@ -1306,58 +1303,92 @@ export function FullMockSection() {
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-colors ${
                   isCurrent
                     ? "bg-blue-600 text-white"
-                    : "text-gray-500"
+                    : "text-gray-400"
                 }`}
               >
                 {getSectionTypeIcon(type, isCurrent)}
                 <span className="capitalize">{type}</span>
-                {totalMin > 0 && <span className={isCurrent ? "text-blue-100" : "text-gray-400"}>{totalMin} min</span>}
+                {totalMin > 0 && <span className={`text-[10px] ml-0.5 ${isCurrent ? "text-blue-200" : "text-gray-300"}`}>{totalMin} min</span>}
               </div>
             );
           })}
         </div>
 
-        {/* Exit */}
-        <button
-          onClick={handleExit}
-          className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 font-medium shrink-0 transition-colors"
-          data-testid="button-exit-exam"
-        >
-          <X className="w-4 h-4" />
-          <span className="hidden sm:block">Exit</span>
-        </button>
+        {/* Right tools: Highlight | Notes | Timer | Submit | Exit */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors">
+            <Highlighter className="w-3.5 h-3.5" />
+            <span className="hidden sm:block">Highlight</span>
+          </button>
+          <button className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors">
+            <NotebookPen className="w-3.5 h-3.5" />
+            <span className="hidden sm:block">Notes</span>
+          </button>
+          <div className={`flex items-center gap-1 px-2 py-1 font-mono text-sm font-bold rounded ${
+            isTimerCritical ? "text-red-600 bg-red-50" :
+            isTimerWarning ? "text-amber-600 bg-amber-50" :
+            "text-gray-800"
+          }`} data-testid="mock-top-timer">
+            <Clock className="w-3.5 h-3.5" />
+            <span>{timerDisplay}</span>
+          </div>
+          {!sectionDone && (
+            <button
+              onClick={() => sectionSubmitRef.current?.()}
+              disabled={submitPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-colors disabled:opacity-60"
+              data-testid="button-submit-mock-section"
+            >
+              {submitPending ? <><Loader2 className="w-3 h-3 animate-spin" /> Submitting…</> : "Submit"}
+            </button>
+          )}
+          <button
+            onClick={handleExit}
+            className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
+            data-testid="button-exit-exam"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span className="hidden sm:block">Exit</span>
+          </button>
+        </div>
       </div>
 
-      {/* ── SmartCEFR-style Parts/Sections Sub-Bar ───────────────── */}
-      <div className="shrink-0 flex items-center gap-1.5 px-4 py-2 border-b bg-white overflow-x-auto">
-        <span className="text-xs text-gray-400 font-medium shrink-0 mr-1">Sections:</span>
+      {/* ── SmartCEFR-style Parts Sub-Bar ───────────────────────── */}
+      <div className="shrink-0 flex items-center gap-1 px-4 py-1.5 border-b bg-white overflow-x-auto">
+        <span className="text-xs text-gray-400 font-semibold shrink-0 mr-2">Parts:</span>
         {activeSections.map((section, idx) => {
           const isCurrent = idx === step;
           const isCompleted = completedSteps.includes(idx) || (sectionDone && idx === step);
+          const qCount = getQCount(section);
+          const label = getSectionLabel(section.type, section.sectionIndex);
           return (
             <button
               key={idx}
               onClick={() => navigateTo(idx, isCompleted || (sectionDone && idx === step))}
               data-testid={`tab-mock-section-${idx + 1}`}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold whitespace-nowrap transition-all border ${
+              className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold whitespace-nowrap transition-all ${
                 isCurrent
-                  ? "bg-blue-600 text-white border-blue-600"
+                  ? "text-blue-700 bg-blue-50 border border-blue-200"
                   : isCompleted
-                    ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                    ? "text-green-700 border border-green-200 bg-green-50 hover:bg-green-100"
+                    : "text-gray-600 border border-gray-200 bg-white hover:bg-gray-50"
               }`}
             >
-              {isCompleted && !isCurrent
-                ? <CheckCircle className="w-3 h-3 shrink-0" />
-                : <span className={`text-[9px] font-bold shrink-0`}>{idx + 1}</span>
-              }
-              {getSectionLabel(section.type, section.sectionIndex)}
+              {isCompleted && !isCurrent && <CheckCircle className="w-3 h-3 shrink-0 text-green-600" />}
+              <span>{label}</span>
+              {qCount > 0 && (
+                <span className={`text-[10px] font-normal ${isCurrent ? "text-blue-500" : isCompleted ? "text-green-500" : "text-gray-400"}`}>
+                  {qCount}Q
+                </span>
+              )}
             </button>
           );
         })}
-        <span className="ml-auto text-xs text-gray-400 shrink-0 pl-3">
-          {completedSteps.length}/{activeSections.length} done
-        </span>
+        {totalQs > 0 && (
+          <span className="ml-auto text-xs text-gray-500 font-semibold shrink-0 pl-3 whitespace-nowrap">
+            Total: {totalQs}Q
+          </span>
+        )}
       </div>
 
       {/* ── Progress bar ─────────────────────────────────────────── */}
@@ -1396,7 +1427,16 @@ export function FullMockSection() {
                 test={currentSection.testData as ListeningTest}
                 onSubmitted={handleSectionSubmitted}
                 initialSeconds={getSectionInitialSeconds(step)}
-                onTimerChange={s => { sectionRemainingRef.current = s; }}
+                onTimerChange={s => {
+                  sectionRemainingRef.current = s;
+                  const m = Math.floor(s / 60);
+                  const sec = s % 60;
+                  setTimerDisplay(`${m}:${String(sec).padStart(2, "0")}`);
+                  const total = (currentSection.testData as any)?.duration * 60 || 0;
+                  setIsTimerCritical(s <= 60);
+                  setIsTimerWarning(s <= Math.min(300, total * 0.15) && s > 60);
+                }}
+                submitRef={sectionSubmitRef}
               />
             )}
             {currentSection.type === "reading" && (
@@ -1404,7 +1444,16 @@ export function FullMockSection() {
                 test={currentSection.testData as ReadingTest}
                 onSubmitted={handleSectionSubmitted}
                 initialSeconds={getSectionInitialSeconds(step)}
-                onTimerChange={s => { sectionRemainingRef.current = s; }}
+                onTimerChange={s => {
+                  sectionRemainingRef.current = s;
+                  const m = Math.floor(s / 60);
+                  const sec = s % 60;
+                  setTimerDisplay(`${m}:${String(sec).padStart(2, "0")}`);
+                  const total = (currentSection.testData as any)?.duration * 60 || 0;
+                  setIsTimerCritical(s <= 60);
+                  setIsTimerWarning(s <= Math.min(300, total * 0.15) && s > 60);
+                }}
+                submitRef={sectionSubmitRef}
               />
             )}
             {currentSection.type === "writing" && (
@@ -1412,7 +1461,16 @@ export function FullMockSection() {
                 test={currentSection.testData as WritingTest}
                 onSubmitted={handleSectionSubmitted}
                 initialSeconds={getSectionInitialSeconds(step)}
-                onTimerChange={s => { sectionRemainingRef.current = s; }}
+                onTimerChange={s => {
+                  sectionRemainingRef.current = s;
+                  const m = Math.floor(s / 60);
+                  const sec = s % 60;
+                  setTimerDisplay(`${m}:${String(sec).padStart(2, "0")}`);
+                  const total = (currentSection.testData as any)?.duration * 60 || 0;
+                  setIsTimerCritical(s <= 60);
+                  setIsTimerWarning(s <= Math.min(300, total * 0.15) && s > 60);
+                }}
+                submitRef={sectionSubmitRef}
               />
             )}
             {currentSection.type === "speaking" && (
@@ -1438,39 +1496,6 @@ export function FullMockSection() {
         )}
       </AnimatePresence>
 
-      {/* ── Footer Navigation ─────────────────────────────────────── */}
-      {!sectionDone && (
-        <div className="shrink-0 border-t bg-background/95 backdrop-blur px-4 py-2.5 flex items-center justify-between gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={step === 0}
-            onClick={() => navigateTo(step - 1)}
-            className="gap-1.5 min-w-[90px]"
-            data-testid="button-prev-section-nav"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back
-          </Button>
-
-          <div className="text-center min-w-0">
-            <p className="text-xs text-muted-foreground tabular-nums font-medium">
-              {step + 1} / {activeSections.length}
-            </p>
-            <p className="text-[11px] text-muted-foreground truncate max-w-[160px]">{sectionLabel}</p>
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isLastStep}
-            onClick={() => navigateTo(step + 1)}
-            className="gap-1.5 min-w-[90px]"
-            data-testid="button-next-section-nav"
-          >
-            Next <ArrowRight className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
