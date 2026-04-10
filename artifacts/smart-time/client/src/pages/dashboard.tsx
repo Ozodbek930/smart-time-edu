@@ -33,21 +33,34 @@ export default function Dashboard() {
     retry: false,
   });
 
+  const { data: myResults } = useQuery<TestResult[]>({
+    queryKey: ["/api/test-results/my"],
+    enabled: !!user,
+  });
+
   useEffect(() => {
     if (!isLoading && !user) {
       setLocation("/login");
     }
   }, [user, isLoading, setLocation]);
 
-  if (!isLoading && !user) {
-    return null;
-  }
-
   const handleLogout = async () => {
     await apiRequest("POST", "/api/auth/logout");
     queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
     setLocation("/");
   };
+
+  if (isLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <motion.div
+          className="w-12 h-12 rounded-xl bg-primary"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        />
+      </div>
+    );
+  }
 
   const skills = [
     {
@@ -107,11 +120,6 @@ export default function Dashboard() {
     },
   ];
 
-  const { data: myResults } = useQuery<TestResult[]>({
-    queryKey: ["/api/test-results/my"],
-    enabled: !!user,
-  });
-
   const testsCompleted = myResults?.length || 0;
   const scoredResults = myResults?.filter(r => r.score != null && r.totalQuestions && r.totalQuestions > 0) || [];
   const avgScore = scoredResults.length > 0
@@ -123,18 +131,6 @@ export default function Dashboard() {
     { icon: Clock, value: String(testsCompleted > 0 ? Math.round(testsCompleted * 0.5) : 0), label: t.dashboardPage.practiceHours, color: "text-blue-600" },
     { icon: Award, value: avgScore > 0 ? String(avgScore) : "—", label: t.dashboardPage.currentBand, color: "text-emerald-600" },
   ];
-
-  if (isLoading || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <motion.div
-          className="w-12 h-12 rounded-xl bg-primary"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background">

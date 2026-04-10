@@ -93,7 +93,7 @@ export default function FullMock() {
                   <Card className="h-full flex flex-col hover-elevate transition-all duration-300" data-testid={`card-fullmock-test-${test.id}`}>
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between gap-2">
-                        <span className="truncate">{test.title}</span>
+                        <span className="break-words min-w-0 line-clamp-2">{test.title}</span>
                         <Badge variant="secondary" className="shrink-0 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           {test.totalDuration}m
