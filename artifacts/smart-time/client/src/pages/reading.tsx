@@ -60,8 +60,8 @@ function QuizDisplay({
       {qs.map((q) => {
         if (q.type === "text") {
           return (
-            <div key={q.id} id={`q-nav-${testId}-${q.id}`} className="px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
-              <p className="text-sm text-amber-900 whitespace-pre-wrap leading-relaxed">{q.question}</p>
+            <div key={q.id} id={`q-nav-${testId}-${q.id}`} className="px-4 py-3 rounded-xl bg-blue-50 border border-blue-200">
+              <p className="text-sm text-blue-900 whitespace-pre-wrap leading-relaxed">{q.question}</p>
             </div>
           );
         }
@@ -73,11 +73,11 @@ function QuizDisplay({
           <div
             key={q.id}
             id={`q-nav-${testId}-${q.id}`}
-            className={`rounded-xl border-2 transition-colors overflow-hidden ${isCorrect ? "border-green-400 bg-green-50/40" : isWrong ? "border-red-300 bg-red-50/30" : "border-amber-100 bg-white"}`}
+            className={`rounded-xl border-2 transition-colors overflow-hidden ${isCorrect ? "border-green-400 bg-green-50/40" : isWrong ? "border-red-300 bg-red-50/30" : "border-blue-100 bg-white"}`}
             data-testid={`question-block-${testId}-${q.id}`}
           >
             <div className="flex items-start gap-3 px-4 pt-4 pb-3">
-              <span className="shrink-0 w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold shadow-sm">{qNums[q.id]}</span>
+              <span className="shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-sm">{qNums[q.id]}</span>
               <p className="text-sm font-medium leading-relaxed pt-0.5" data-testid={`text-reading-question-${testId}-${q.id}`}>{q.question}</p>
             </div>
 
@@ -106,7 +106,7 @@ function QuizDisplay({
                   onChange={(e) => !submitted && onAnswer(q.id, e.target.value)}
                   disabled={submitted}
                   data-testid={`select-answer-${testId}-${q.id}`}
-                  className={`w-full max-w-sm p-2.5 rounded-lg border text-sm bg-background transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400/40 ${submitted ? (isCorrect ? "border-green-500 bg-green-50" : isWrong ? "border-red-500 bg-red-50" : "border-border") : "border-amber-200 cursor-pointer hover:border-amber-400"}`}
+                  className={`w-full max-w-sm p-2.5 rounded-lg border text-sm bg-background transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400/40 ${submitted ? (isCorrect ? "border-green-500 bg-green-50" : isWrong ? "border-red-500 bg-red-50" : "border-border") : "border-blue-200 cursor-pointer hover:border-blue-400"}`}
                 >
                   <option value="">— Select answer —</option>
                   {q.options.map((opt, i) => <option key={i} value={i.toString()}>{opt}</option>)}
@@ -129,8 +129,8 @@ function QuizDisplay({
                   if (isThisCorrect) cls += "bg-green-500 border-green-500 text-white";
                   else if (isThisWrong) cls += "bg-red-500 border-red-500 text-white";
                   else if (isCorrectUnselected) cls += "border-green-500 text-green-700 bg-green-50";
-                  else if (isSelected) cls += "border-amber-500 bg-amber-100 text-amber-800";
-                  else cls += "border-gray-200 text-gray-600 hover:border-amber-400 hover:bg-amber-50 cursor-pointer";
+                  else if (isSelected) cls += "border-blue-600 bg-blue-100 text-blue-800";
+                  else cls += "border-gray-200 text-gray-600 hover:border-blue-400 hover:bg-blue-50 cursor-pointer";
                   return (
                     <button key={optIdx} type="button" onClick={() => !submitted && onAnswer(q.id, optIdx.toString())} data-testid={`tfng-option-${testId}-${q.id}-${optIdx}`} className={cls}>
                       {label}
@@ -142,7 +142,7 @@ function QuizDisplay({
                 })}
               </div>
             ) : (
-              <div className="divide-y divide-gray-100 border-t border-amber-100">
+              <div className="divide-y divide-gray-100 border-t border-blue-100">
                 {q.options.map((option, optIdx) => {
                   const isThisCorrect = submitted && optIdx === q.correctAnswer;
                   const isThisWrong = submitted && optIdx === (userAnswer as number) && optIdx !== q.correctAnswer;
@@ -150,12 +150,12 @@ function QuizDisplay({
                   let rowCls = "flex items-center gap-3 px-4 py-3 text-sm cursor-pointer transition-all duration-150 ";
                   if (isThisCorrect) rowCls += "bg-green-50 text-green-800";
                   else if (isThisWrong) rowCls += "bg-red-50 text-red-800";
-                  else if (isSelected) rowCls += "bg-amber-50 text-amber-900";
-                  else rowCls += "hover:bg-amber-50/60 text-gray-700";
+                  else if (isSelected) rowCls += "bg-blue-50 text-blue-900";
+                  else rowCls += "hover:bg-blue-50/60 text-gray-700";
                   const letterCls = `shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
                     isThisCorrect ? "border-green-500 bg-green-500 text-white" :
                     isThisWrong ? "border-red-500 bg-red-500 text-white" :
-                    isSelected ? "border-amber-500 bg-amber-500 text-white" :
+                    isSelected ? "border-blue-600 bg-blue-600 text-white" :
                     "border-gray-300 text-gray-500"
                   }`;
                   return (
@@ -420,7 +420,7 @@ function ReadingTestCard({ test, index }: { test: ReadingTest; index: number }) 
                 {!submitted && mode !== "written" && (
                   <Button
                     size="sm"
-                    className="gap-1.5 bg-amber-500 hover:bg-amber-600 text-white"
+                    className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
                     onClick={handleManualSubmit}
                     disabled={submitMutation.isPending}
                     data-testid={`button-submit-exam-${test.id}`}
@@ -442,7 +442,7 @@ function ReadingTestCard({ test, index }: { test: ReadingTest; index: number }) 
 
             <div className="flex-1 flex overflow-hidden">
               <div className="w-1/2 overflow-y-auto p-4 md:p-6 border-r">
-                <h4 className="text-xs font-semibold text-amber-600 uppercase tracking-wide mb-3">{t.reading.passage}</h4>
+                <h4 className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-3">{t.reading.passage}</h4>
                 {test.pdfUrl && (
                   <div className="p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/50 mb-4">
                     <div className="flex items-center justify-between gap-3">
@@ -522,7 +522,7 @@ function ReadingTestCard({ test, index }: { test: ReadingTest; index: number }) 
                       const wrong = submitted && answers[q.id] !== undefined && !correct;
                       let cls = "w-8 h-8 rounded-full text-xs font-bold transition-all duration-200 border-2 cursor-pointer shrink-0 ";
                       if (submitted) cls += correct ? "bg-green-500 border-green-500 text-white" : wrong ? "bg-red-500 border-red-500 text-white" : "bg-muted border-border text-muted-foreground";
-                      else cls += answered ? "bg-amber-500 border-amber-500 text-white" : "bg-white border-gray-200 text-gray-500 hover:border-amber-400 hover:text-amber-600";
+                      else cls += answered ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-600";
                       return (
                         <button
                           key={q.id}
