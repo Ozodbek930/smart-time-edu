@@ -1,0 +1,242 @@
+Create a PROFESSIONAL IELTS MOCK TEST PLATFORM similar to CD IELTS.
+
+The system must allow ADMIN to BUILD COMPLETE MOCK TESTS using PRE-CREATED PARTS.
+
+MAIN IDEA
+Admin first creates individual PARTS (Listening Part 1, Reading Passage 2, Writing Task 1 etc).
+Then admin combines these parts to build a FULL MOCK TEST.
+
+The mock test builder must work exactly like CD IELTS.
+
+TECH STACK
+Frontend: React + TailwindCSS
+Backend: Node.js + Express
+Database: PostgreSQL
+Drag & Drop: dnd-kit
+
+--------------------------------
+
+SYSTEM STRUCTURE
+
+1. ADMIN DASHBOARD
+
+Admin can manage:
+
+Mock Tests
+Parts Library
+Questions
+Audio
+Passages
+Writing tasks
+Speaking prompts
+
+--------------------------------
+
+2. PART LIBRARY (MOST IMPORTANT)
+
+Admin can create reusable parts.
+
+Listening Parts
+Part 1
+Part 2
+Part 3
+Part 4
+
+Reading Passages
+Passage 1
+Passage 2
+Passage 3
+
+Writing Tasks
+Task 1
+Task 2
+
+Speaking Parts
+Part 1
+Part 2
+Part 3
+
+Each part can contain:
+
+audio
+text
+questions
+instructions
+images
+
+--------------------------------
+
+3. MOCK TEST BUILDER (DRAG & DROP)
+
+Admin can create a new MOCK TEST.
+
+Then drag parts from PART LIBRARY into the mock test.
+
+Example:
+
+Mock Test #15
+
+Listening
+- Part 1 (from library)
+- Part 2 (from library)
+- Part 3 (from library)
+- Part 4 (from library)
+
+Reading
+- Passage 1
+- Passage 2
+- Passage 3
+
+Writing
+- Task 1
+- Task 2
+
+Speaking
+- Part 1
+- Part 2
+- Part 3
+
+Admin can reorder parts using drag and drop.
+
+--------------------------------
+
+4. QUESTION BUILDER
+
+Each part has its own questions.
+
+Supported IELTS question types:
+
+Multiple Choice
+Matching Headings
+Matching Information
+True False Not Given
+Yes No Not Given
+Sentence Completion
+Summary Completion
+Table Completion
+Note Completion
+Flowchart Completion
+Diagram Labeling
+Map Labeling
+Matching Sentence Endings
+Short Answer
+
+Admin must be able to create these using drag-and-drop question builder.
+
+--------------------------------
+
+5. LISTENING SYSTEM
+
+Admin can:
+
+upload audio
+add timestamps
+connect questions to timestamps
+
+Student interface:
+
+audio player
+questions appear by part
+
+--------------------------------
+
+6. READING SYSTEM
+
+Admin can:
+
+paste reading passage
+divide passage by paragraphs
+connect questions to paragraphs
+
+--------------------------------
+
+7. WRITING SYSTEM
+
+Admin can:
+
+create writing prompts
+add instructions
+add word limits
+add sample answers
+
+--------------------------------
+
+8. SPEAKING SYSTEM
+
+Admin can:
+
+create speaking questions
+add cue cards
+add preparation timer
+
+--------------------------------
+
+9. STUDENT MOCK TEST PAGE
+
+Student experience must be similar to CD IELTS:
+
+Section timer
+Question navigator
+Auto save answers
+Submit test
+
+Listening 30 minutes
+Reading 60 minutes
+Writing 60 minutes
+Speaking practice mode
+
+--------------------------------
+
+10. SCORING SYSTEM
+
+Listening auto scoring
+Reading auto scoring
+Writing manual scoring
+Speaking manual scoring
+
+Band score estimation (0–9).
+
+--------------------------------
+
+11. DATABASE TABLES
+
+Users
+MockTests
+Parts
+Sections
+Questions
+Answers
+AudioFiles
+Passages
+WritingTasks
+SpeakingPrompts
+Results
+
+--------------------------------
+
+12. UI DESIGN
+
+Professional exam interface similar to CD IELTS.
+
+Left side:
+Passage or audio player
+
+Right side:
+Questions
+
+Top:
+Timer
+
+--------------------------------
+
+13. BONUS FEATURES
+
+Question bank
+Part library reuse
+Mock test duplication
+Exam preview mode
+Student results dashboard
+
+--------------------------------
+
+Generate the full working project with folder structure and example components.

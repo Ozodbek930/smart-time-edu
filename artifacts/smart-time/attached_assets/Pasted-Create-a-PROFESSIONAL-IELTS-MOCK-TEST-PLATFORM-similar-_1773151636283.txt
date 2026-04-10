@@ -1,0 +1,221 @@
+Create a PROFESSIONAL IELTS MOCK TEST PLATFORM similar to CD IELTS.
+
+IMPORTANT REQUIREMENT
+
+The system must support a DYNAMIC PART SYSTEM.
+
+Each exam section must allow the admin to ADD AS MANY PARTS AS NEEDED.
+
+Admin should not be limited by fixed parts.
+
+Example:
+
+Listening → Admin can add multiple parts (Part 1, Part 2, Part 3, Part 4)
+
+Reading → Admin can add multiple passages (Passage 1, Passage 2, Passage 3)
+
+Writing → Admin can add multiple tasks (Task 1, Task 2)
+
+Speaking → Admin can add multiple parts (Part 1, Part 2, Part 3)
+
+Admin must be able to ADD / REMOVE / REORDER parts dynamically.
+
+--------------------------------
+
+TECH STACK
+
+Frontend: React
+Styling: TailwindCSS
+Backend: Node.js + Express
+Database: PostgreSQL
+Drag and Drop: dnd-kit
+
+--------------------------------
+
+ADMIN DASHBOARD
+
+Admin can manage:
+
+Mock Tests
+Sections
+Parts Library
+Questions
+Audio
+Passages
+Writing Tasks
+Speaking Prompts
+
+--------------------------------
+
+SECTION SYSTEM
+
+Each mock test contains sections:
+
+Listening
+Reading
+Writing
+Speaking
+
+Each section must have a button:
+
++ Add Part
+
+When clicked, admin can create a new part.
+
+Example:
+
+Listening
+Part 1
+Part 2
+Part 3
+Part 4
+
+Reading
+Passage 1
+Passage 2
+Passage 3
+
+Writing
+Task 1
+Task 2
+
+Speaking
+Part 1
+Part 2
+Part 3
+
+Parts must be reorderable using drag and drop.
+
+--------------------------------
+
+PART STRUCTURE
+
+Each Part can contain:
+
+Title
+Instructions
+Audio (for listening)
+Text passage (for reading)
+Cue card (for speaking)
+Writing prompt (for writing)
+Questions
+
+--------------------------------
+
+QUESTION BUILDER
+
+Admin can add questions inside each part.
+
+Supported IELTS question types:
+
+Multiple Choice
+True False Not Given
+Yes No Not Given
+Matching Headings
+Matching Information
+Matching Sentence Endings
+Sentence Completion
+Summary Completion
+Table Completion
+Note Completion
+Flowchart Completion
+Diagram Labeling
+Map Labeling
+Short Answer
+
+Admin can drag and drop question types.
+
+--------------------------------
+
+LISTENING PART
+
+Each listening part supports:
+
+audio upload
+question linking
+timestamps
+
+--------------------------------
+
+READING PART
+
+Each reading part supports:
+
+passage text
+paragraph highlighting
+question linking
+
+--------------------------------
+
+WRITING PART
+
+Each writing part supports:
+
+writing instructions
+word limit
+sample answers
+
+--------------------------------
+
+SPEAKING PART
+
+Each speaking part supports:
+
+question list
+cue card
+discussion questions
+preparation timer
+
+--------------------------------
+
+MOCK TEST BUILDER
+
+Admin creates a new mock test.
+
+Inside the mock test admin can:
+
+Add sections
+Add parts inside sections
+Reorder parts
+Add questions to parts
+
+--------------------------------
+
+STUDENT INTERFACE
+
+Professional exam interface similar to CD IELTS.
+
+Features:
+
+Timer
+Question navigator
+Answer auto-save
+Submit test
+
+--------------------------------
+
+DATABASE STRUCTURE
+
+Users
+MockTests
+Sections
+Parts
+Questions
+Answers
+AudioFiles
+Passages
+WritingTasks
+SpeakingPrompts
+Results
+
+--------------------------------
+
+IMPORTANT FEATURE
+
+The system must allow unlimited parts per section.
+
+Admin must be able to dynamically add parts for Listening, Reading, Writing, and Speaking.
+
+--------------------------------
+
+Generate full project structure and example components.

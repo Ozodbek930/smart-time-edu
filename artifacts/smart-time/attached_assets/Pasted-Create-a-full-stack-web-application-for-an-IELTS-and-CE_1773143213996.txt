@@ -1,0 +1,133 @@
+Create a full-stack web application for an IELTS and CEFR mock exam system with an ADMIN dashboard.
+
+MAIN GOAL
+Build an admin panel where administrators can CREATE, EDIT, and MANAGE IELTS and CEFR exam questions using a DRAG AND DROP question builder.
+
+TECH STACK
+Frontend: React + TailwindCSS
+Backend: Node.js + Express
+Database: PostgreSQL (or Supabase)
+Drag and Drop: react-beautiful-dnd or dnd-kit
+
+SYSTEM STRUCTURE
+
+1. ADMIN PANEL
+Admin should be able to:
+- Create exams
+- Create sections (Listening, Reading)
+- Add questions with a DRAG AND DROP builder
+- Upload audio for listening tests
+- Preview the exam
+- Edit and delete questions
+
+2. QUESTION BUILDER (DRAG AND DROP)
+
+Admin can drag question types into the test builder.
+
+Supported IELTS/CEFR question types:
+
+Reading
+- Multiple Choice
+- Matching Headings
+- Matching Information
+- True / False / Not Given
+- Yes / No / Not Given
+- Sentence Completion
+- Summary Completion
+- Table Completion
+- Flowchart Completion
+- Diagram Labeling
+- Matching Sentence Endings
+- Short Answer Questions
+
+Listening
+- Multiple Choice
+- Map Labeling
+- Form Completion
+- Table Completion
+- Note Completion
+- Sentence Completion
+- Matching
+
+Each question type should have its own form configuration panel.
+
+3. DRAG AND DROP QUESTION BUILDER UI
+
+Admin interface should work like this:
+
+Left sidebar:
+List of question types
+
+Center:
+Drag questions here to build the exam
+
+Right panel:
+Question settings
+
+Admin can:
+- reorder questions
+- edit answers
+- set correct answers
+- add explanation
+
+4. LISTENING TEST SYSTEM
+
+Admin can:
+- upload audio file
+- add timestamp based questions
+- connect questions to parts of the audio
+
+Student view:
+- audio player
+- synchronized questions
+
+5. READING TEST SYSTEM
+
+Admin can:
+- paste reading passage
+- highlight paragraphs
+- attach questions to paragraphs
+
+6. EXAM STRUCTURE
+
+Exam
+  Section (Listening/Reading)
+    Passage or Audio
+      Questions
+
+7. STUDENT VIEW (Preview Mode)
+
+- Timer
+- Navigation panel
+- Drag-and-drop answers for matching questions
+- Input answers
+- Auto scoring system
+
+8. SCORING SYSTEM
+
+Automatically calculate IELTS band estimation for Reading and Listening.
+
+9. DATABASE TABLES
+
+Users
+Exams
+Sections
+Passages
+Questions
+Answers
+AudioFiles
+Results
+
+10. DESIGN
+
+Clean modern UI similar to professional exam platforms.
+Use Tailwind components and card layouts.
+
+11. BONUS FEATURES
+
+- Question import/export
+- Question bank
+- Random question generator
+- CEFR level tagging (A1–C2)
+
+Generate the complete working project structure and example components.

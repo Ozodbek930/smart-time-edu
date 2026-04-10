@@ -1,0 +1,227 @@
+Build a modern web application that replicates the IELTS Computer-Delivered Mock Test interface similar to the structure and UI style of this website:
+https://smartcefrmock.netlify.app/
+
+However, the platform must be designed specifically for a complete IELTS Computer Delivered Mock Exam simulation.
+
+The goal is to create a realistic IELTS exam environment that feels almost identical to the real IELTS CD test.
+
+Core Platform Structure
+
+The website should contain:
+
+Landing page
+
+Mock Test dashboard
+
+Full Mock IELTS Exam system
+
+Skill practice sections
+
+The UI should be clean, minimal, and exam-focused, similar to modern IELTS mock platforms.
+
+Full Mock IELTS Exam (MAIN FEATURE)
+
+The platform must include a Full Mock IELTS Test Mode that simulates the real exam.
+
+The Full Mock must include four sections:
+
+Listening
+
+Reading
+
+Writing
+
+Speaking
+
+Each section must open on a separate page and follow official IELTS structure.
+
+IELTS Listening Simulation
+
+Listening section must replicate the real exam:
+
+4 sections
+
+40 questions
+
+Audio player
+
+Questions appear while audio plays
+
+Automatic timing
+
+Features:
+
+Play audio only once
+
+Timer (30 minutes)
+
+Navigation between questions
+
+Answer input fields
+
+Question types:
+
+Multiple choice
+
+Sentence completion
+
+Form completion
+
+Map labeling
+
+Matching
+
+IELTS Reading Simulation
+
+Reading interface must replicate the real IELTS computer interface:
+
+Layout:
+
+LEFT SIDE:
+
+Reading passage
+
+RIGHT SIDE:
+
+Questions
+
+Features:
+
+Highlight text
+
+Scroll passages
+
+Navigate questions
+
+Flag questions
+
+Timing:
+
+60 minute timer
+
+40 questions
+
+Question types:
+
+True / False / Not Given
+
+Matching headings
+
+Multiple choice
+
+Sentence completion
+
+Summary completion
+
+IELTS Writing Simulation
+
+Writing must replicate the real CD IELTS interface.
+
+Writing Tasks:
+
+Task 1:
+
+Chart / Graph / Diagram
+
+Task 2:
+
+Essay question
+
+Features:
+
+Word counter
+
+Timer (60 minutes)
+
+Text editor similar to IELTS CD exam
+
+Instructions panel
+
+Layout:
+
+LEFT: Task description
+RIGHT: Writing editor
+
+IELTS Speaking Simulation
+
+Speaking test must replicate the official structure.
+
+3 Parts:
+
+Part 1 – Introduction & Interview
+(4–5 minutes)
+
+Part 2 – Cue Card
+
+1 minute preparation
+
+2 minute speaking
+
+Part 3 – Discussion
+(4–5 minutes)
+
+Features:
+
+Voice recording
+
+Timer
+
+Cue card display
+
+Exam Behavior Rules
+
+The system must behave like a real IELTS exam:
+
+Each section has its own timer
+
+Once a section is finished → user cannot go back
+
+No answer checking during the exam
+
+Only Submit button
+
+After finishing all sections → show results page.
+
+Interface Design
+
+The interface must feel like a real IELTS computer test system.
+
+Required UI elements:
+
+Top exam timer
+
+Question navigation panel
+
+Clean exam layout
+
+Minimal distractions
+
+Design style:
+
+Professional
+
+Academic
+
+Clean exam interface
+
+Technical Requirements
+
+Build using modern web stack:
+
+React / Next.js
+
+TailwindCSS
+
+Component-based architecture
+
+Features:
+
+Responsive UI
+
+Fast loading
+
+Smooth navigation
+
+Final Goal
+
+The system should simulate the complete IELTS Computer Delivered Mock Exam experience, allowing users to practice the test exactly as they would take it in a real IELTS testing center.
