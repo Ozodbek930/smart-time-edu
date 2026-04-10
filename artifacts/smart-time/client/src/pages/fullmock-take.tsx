@@ -1655,6 +1655,461 @@ export function FullMockSection() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// All-in-One Exam — /fullmock/:id/exam
+// All sections (Listening, Reading, Writing, Speaking) on one scrollable page
+// with a single global timer and a single Submit All button.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function FullMockAllInOneExam() {
+  const { id } = useParams<{ id: string }>();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+
+  const { data: fullMock, isLoading: loadingMock } = useQuery<FullMockTest>({
+    queryKey: ["/api/fullmock-tests"],
+    select: (tests: any) => Array.isArray(tests) ? tests.find((t: any) => t.id === id) : undefined,
+  });
+  const { data: speakingTests } = useQuery<SpeakingTest[]>({ queryKey: ["/api/speaking-tests"], enabled: !!fullMock });
+  const { data: listeningTests } = useQuery<ListeningTest[]>({ queryKey: ["/api/listening-tests"], enabled: !!fullMock });
+  const { data: readingTests } = useQuery<ReadingTest[]>({ queryKey: ["/api/reading-tests"], enabled: !!fullMock });
+  const { data: writingTests } = useQuery<WritingTest[]>({ queryKey: ["/api/writing-tests"], enabled: !!fullMock });
+
+  const activeSections = useMemo(() => {
+    if (!fullMock) return [];
+    return fullMock.sections.map(s => {
+      let testData: any = null;
+      if (s.type === "speaking") testData = speakingTests?.find(t => t.id === s.testId);
+      if (s.type === "listening") testData = listeningTests?.find(t => t.id === s.testId);
+      if (s.type === "reading") testData = readingTests?.find(t => t.id === s.testId);
+      if (s.type === "writing") testData = writingTests?.find(t => t.id === s.testId);
+      return { ...s, testData };
+    });
+  }, [fullMock, speakingTests, listeningTests, readingTests, writingTests]);
+
+  // Per-section answers keyed by section idx
+  const [sectionAnswers, setSectionAnswers] = useState<Record<number, Record<number, number | string>>>({});
+  // Writing responses keyed by section idx
+  const [writingResponses, setWritingResponses] = useState<Record<number, string>>({});
+  const [submitted, setSubmitted] = useState(false);
+  const [fontSize, setFontSize] = useState(14);
+
+  const totalDuration = activeSections.reduce((sum, s) => sum + ((s.testData as any)?.duration || 0), 0);
+
+  const submittedRef = useRef(false);
+
+  const handleAutoSubmit = () => {
+    if (!submittedRef.current) {
+      submittedRef.current = true;
+      setSubmitted(true);
+      submitMutation.mutate();
+    }
+  };
+
+  const timer = useCountdownTimer(totalDuration, handleAutoSubmit, !submitted);
+  const isTimerCritical = timer.secondsLeft < 120;
+  const isTimerWarning = timer.secondsLeft < 300 && !isTimerCritical;
+
+  // Build all answerable questions across all sections for the bottom nav
+  const allNavQs = useMemo(() => {
+    const result: Array<{ id: number; secIdx: number; isText: boolean; elemId: string }> = [];
+    activeSections.forEach((sec, secIdx) => {
+      if (sec.type === "speaking" || sec.type === "writing") return;
+      const td = sec.testData as any;
+      if (!td) return;
+      const secs = td.testSections?.length > 0 ? td.testSections : [{ questions: td.questions || [] }];
+      secs.forEach((s: any, sIdx: number) => {
+        const qs = ((s.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
+        const prefix = sec.type === "listening"
+          ? `mq-aio-${sec.testId}-${sIdx}`
+          : `mrq-aio-r-${secIdx}-${sIdx}`;
+        qs.filter((q: any) => q.type !== "text").forEach((q: any) => {
+          result.push({
+            id: q.id,
+            secIdx,
+            isText: q.type === "completion" || q.type === "short-answer",
+            elemId: `${prefix}-${q.id}`,
+          });
+        });
+      });
+    });
+    return result;
+  }, [activeSections]);
+
+  const isQAnswered = (q: { id: number; secIdx: number; isText: boolean }) => {
+    const ans = sectionAnswers[q.secIdx]?.[q.id];
+    if (q.isText) return typeof ans === "string" && ans.trim().length > 0;
+    return ans !== undefined;
+  };
+  const answeredCount = allNavQs.filter(isQAnswered).length;
+
+  const submitAll = async () => {
+    setSubmitted(true);
+    let anyError = false;
+    for (let i = 0; i < activeSections.length; i++) {
+      const sec = activeSections[i];
+      if (!sec.testData) continue;
+      try {
+        if (sec.type === "listening" || sec.type === "reading") {
+          const td = sec.testData as any;
+          const qs = (td.testSections?.length > 0 ? td.testSections : [{ questions: td.questions || [] }])
+            .flatMap((s: any) => ((s.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]))
+            .filter((q: any) => q.type !== "text");
+          const correct = qs.filter((q: any) => {
+            const ans = sectionAnswers[i]?.[q.id];
+            if (q.correctAnswer !== undefined) return parseInt(ans as string) === q.correctAnswer;
+            if (q.correctText) return (ans as string)?.trim().toLowerCase() === q.correctText.toLowerCase();
+            return false;
+          }).length;
+          await apiRequest("POST", "/api/test-results", {
+            testType: sec.type,
+            testId: sec.testId,
+            score: correct,
+            totalQuestions: qs.length,
+            answers: Object.fromEntries(Object.entries(sectionAnswers[i] || {}).map(([k, v]) => [k, v])),
+          });
+        } else if (sec.type === "writing") {
+          await apiRequest("POST", "/api/test-results", {
+            testType: "writing",
+            testId: sec.testId,
+            answers: { response: writingResponses[i] || "" },
+          });
+        }
+      } catch {
+        anyError = true;
+      }
+    }
+    if (anyError) {
+      toast({ title: "Some sections couldn't be saved", variant: "destructive" });
+    } else {
+      toast({ title: "Exam submitted!", description: `${answeredCount}/${allNavQs.length} questions answered` });
+    }
+  };
+
+  const submitMutation = useMutation({
+    mutationFn: submitAll,
+    onSuccess: () => {
+      setTimeout(() => setLocation("/fullmock"), 2000);
+    },
+  });
+
+  const scrollToSection = (secIdx: number) => {
+    document.getElementById(`aio-sec-${secIdx}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const scrollToQ = (q: { id: number; elemId: string; secIdx: number }) => {
+    const el = document.getElementById(q.elemId);
+    if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    else { document.getElementById(`aio-sec-${q.secIdx}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }
+  };
+
+  if (loadingMock || !fullMock) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (submitted && !submitMutation.isPending) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white">
+        <div className="text-center space-y-4 p-8">
+          <div className="w-20 h-20 rounded-full bg-green-100 border-4 border-green-400 flex items-center justify-center mx-auto">
+            <CheckCircle className="w-10 h-10 text-green-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900">Exam Submitted!</h2>
+          <p className="text-gray-500">{answeredCount}/{allNavQs.length} questions answered</p>
+          <p className="text-sm text-gray-400">Returning to mock exams...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-white flex flex-col overflow-hidden" data-testid="aio-exam-container">
+
+      {/* ── Top Bar ── */}
+      <div className="shrink-0 flex items-center px-4 py-2 border-b bg-white gap-2 shadow-sm">
+        {/* Brand */}
+        <div className="shrink-0 flex flex-col min-w-0 leading-tight mr-1">
+          <span className="font-bold text-sm text-gray-900 tracking-tight">SMART TIME</span>
+          <span className="text-[9px] text-gray-400 uppercase tracking-widest">Education</span>
+        </div>
+
+        {/* Section anchor tabs */}
+        <div className="flex-1 flex items-center gap-0.5 overflow-x-auto justify-center">
+          {activeSections.map((sec, idx) => {
+            const colors: Record<string, string> = { listening: "text-blue-600", reading: "text-green-600", writing: "text-purple-600", speaking: "text-rose-600" };
+            const icons: Record<string, JSX.Element> = {
+              listening: <Headphones className="w-3 h-3" />,
+              reading: <BookOpen className="w-3 h-3" />,
+              writing: <PenTool className="w-3 h-3" />,
+              speaking: <Mic className="w-3 h-3" />,
+            };
+            return (
+              <button
+                key={idx}
+                onClick={() => scrollToSection(idx)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded hover:bg-gray-100 transition-colors whitespace-nowrap ${colors[sec.type] ?? "text-gray-600"}`}
+                data-testid={`aio-tab-${sec.type}-${idx}`}
+              >
+                {icons[sec.type]}
+                <span className="capitalize hidden sm:block">{sec.type}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Timer + A- A+ + Submit + Exit */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className={`font-mono text-sm font-bold px-2 py-1 rounded ${isTimerCritical ? "text-red-600 bg-red-50" : isTimerWarning ? "text-amber-600 bg-amber-50" : "text-gray-800 bg-gray-100"}`} data-testid="aio-timer">
+            {timer.display}
+          </div>
+          <button onClick={() => setFontSize(s => Math.max(12, s - 1))} className="hidden sm:block px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 text-gray-600 font-semibold">A-</button>
+          <button onClick={() => setFontSize(s => Math.min(20, s + 1))} className="hidden sm:block px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 text-gray-600 font-semibold">A+</button>
+          {!submitted && (
+            <button
+              onClick={() => { if (window.confirm(`Submit all sections? ${allNavQs.length - answeredCount} questions unanswered.`)) submitMutation.mutate(); }}
+              disabled={submitMutation.isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs font-semibold rounded transition-colors disabled:opacity-60"
+              data-testid="button-aio-submit"
+            >
+              {submitMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+              <span className="hidden sm:block">Submit All</span>
+            </button>
+          )}
+          <button
+            onClick={() => { if (window.confirm("Exit the exam? Your progress won't be saved.")) setLocation("/fullmock"); }}
+            className="p-1.5 hover:bg-gray-100 rounded text-gray-500"
+            data-testid="button-aio-exit"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Scrollable body ── */}
+      <div className="flex-1 overflow-y-auto bg-gray-50" style={{ fontSize: `${fontSize}px` }}>
+        <div className="max-w-5xl mx-auto pb-4">
+          {activeSections.map((sec, secIdx) => {
+            const td = sec.testData as any;
+            const secColors: Record<string, { bg: string; border: string; text: string }> = {
+              listening: { bg: "bg-blue-600", border: "border-blue-200", text: "text-blue-700" },
+              reading:   { bg: "bg-emerald-600", border: "border-emerald-200", text: "text-emerald-700" },
+              writing:   { bg: "bg-violet-600", border: "border-violet-200", text: "text-violet-700" },
+              speaking:  { bg: "bg-rose-600", border: "border-rose-200", text: "text-rose-700" },
+            };
+            const colors = secColors[sec.type] ?? { bg: "bg-gray-600", border: "border-gray-200", text: "text-gray-700" };
+            const secIcons: Record<string, JSX.Element> = {
+              listening: <Headphones className="w-4 h-4 text-white" />,
+              reading: <BookOpen className="w-4 h-4 text-white" />,
+              writing: <PenTool className="w-4 h-4 text-white" />,
+              speaking: <Mic className="w-4 h-4 text-white" />,
+            };
+
+            return (
+              <div key={secIdx} id={`aio-sec-${secIdx}`} className="scroll-mt-14">
+                {/* Section divider header */}
+                <div className={`flex items-center gap-3 px-6 py-3 ${colors.bg}`}>
+                  {secIcons[sec.type]}
+                  <span className="text-white font-bold text-sm uppercase tracking-widest">{sec.type}</span>
+                  {td?.title && <span className="text-white/70 text-xs ml-1 truncate">{td.title}</span>}
+                  {td?.duration && <span className="ml-auto text-white/60 text-xs">{td.duration} min</span>}
+                </div>
+
+                {/* Section content */}
+                <div className="bg-white border-b">
+                  {!td ? (
+                    <div className="p-8 text-center text-gray-400">
+                      <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-amber-400" />
+                      <p className="text-sm">No test data found for this section.</p>
+                    </div>
+                  ) : sec.type === "listening" ? (
+                    /* ── LISTENING ── */
+                    <div className="p-6 space-y-8">
+                      {(td.testSections?.length > 0 ? td.testSections : [{ questions: td.questions || [], audioUrl: td.audioUrl }]).map((lSec: any, lIdx: number) => {
+                        const lQs: ListeningQuestion[] = ((lSec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
+                        return (
+                          <div key={lIdx} className="space-y-4">
+                            <h3 className="text-base font-bold text-gray-900">Part {lIdx + 1}</h3>
+                            {lSec.audioUrl && (
+                              <div className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-3">
+                                <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Audio</p>
+                                <audio controls className="w-full h-9 rounded" src={lSec.audioUrl} />
+                              </div>
+                            )}
+                            {lSec.mapUrl ? (
+                              <div className="flex gap-5 items-start">
+                                <div className="w-64 shrink-0 sticky top-14 self-start rounded-lg border-2 border-blue-300 overflow-hidden">
+                                  <div className="bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-800 border-b border-blue-200">Map</div>
+                                  <img src={lSec.mapUrl} alt="Map" className="w-full object-contain bg-white" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <MockListeningQuiz
+                                    questions={lQs}
+                                    testId={`aio-${sec.testId}-${lIdx}`}
+                                    hideNav={true}
+                                    onAnswersChange={ans => setSectionAnswers(prev => ({ ...prev, [secIdx]: { ...(prev[secIdx] || {}), ...ans } }))}
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <MockListeningQuiz
+                                questions={lQs}
+                                testId={`aio-${sec.testId}-${lIdx}`}
+                                hideNav={true}
+                                onAnswersChange={ans => setSectionAnswers(prev => ({ ...prev, [secIdx]: { ...(prev[secIdx] || {}), ...ans } }))}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : sec.type === "reading" ? (
+                    /* ── READING ── */
+                    <div>
+                      {(td.testSections?.length > 0 ? td.testSections : [{ passage: td.passage, questions: td.questions || [] }]).map((rSec: any, rIdx: number) => {
+                        const rQs: ReadingQuestion[] = ((rSec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
+                        return (
+                          <div key={rIdx} className={rIdx > 0 ? "border-t" : ""}>
+                            {td.testSections?.length > 1 && (
+                              <div className="px-6 py-3 bg-emerald-50 border-b border-emerald-100">
+                                <h3 className="text-sm font-bold text-emerald-800">Passage {rIdx + 1}</h3>
+                              </div>
+                            )}
+                            <div className="flex min-h-[400px]">
+                              <div className="w-1/2 border-r p-4 md:p-6 overflow-auto max-h-[70vh]">
+                                <HighlightablePassage passage={rSec.passage || ""} testId={`aio-r-${secIdx}-${rIdx}`} />
+                              </div>
+                              <div className="w-1/2 overflow-auto max-h-[70vh]">
+                                <MockReadingQuiz
+                                  questions={rQs}
+                                  testId={`aio-r-${secIdx}-${rIdx}`}
+                                  onAnswersChange={ans => setSectionAnswers(prev => ({ ...prev, [secIdx]: { ...(prev[secIdx] || {}), ...ans } }))}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : sec.type === "writing" ? (
+                    /* ── WRITING ── */
+                    <div className="flex min-h-[400px]">
+                      <div className="w-2/5 border-r flex flex-col">
+                        <div className="px-4 py-2.5 border-b bg-violet-600">
+                          <p className="text-xs font-semibold text-white uppercase tracking-wide">Writing Task {td.task}</p>
+                        </div>
+                        <div className="flex-1 overflow-auto p-4 space-y-4">
+                          <p className="text-sm leading-relaxed whitespace-pre-line text-gray-800">{td.prompt}</p>
+                          {td.tips?.length > 0 && (
+                            <div className="border-t pt-3 space-y-1">
+                              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Guidance</p>
+                              {td.tips.map((tip: string, ti: number) => (
+                                <p key={ti} className="text-xs text-gray-500 leading-relaxed">• {tip}</p>
+                              ))}
+                            </div>
+                          )}
+                          <p className="text-xs text-gray-400 border-t pt-3">Write at least <span className="font-semibold text-gray-600">{td.task === 1 ? 150 : 250} words</span>.</p>
+                        </div>
+                      </div>
+                      <div className="w-3/5 flex flex-col">
+                        <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b bg-gray-50 text-xs text-gray-500">
+                          <span className="font-semibold text-gray-700">
+                            {(writingResponses[secIdx] || "").trim() ? (writingResponses[secIdx] || "").trim().split(/\s+/).length : 0} words
+                          </span>
+                          <span className="ml-auto">Target: {td.task === 1 ? 150 : 250}+</span>
+                        </div>
+                        <textarea
+                          className="flex-1 resize-none p-4 text-sm text-gray-800 outline-none border-0 focus:ring-0 bg-white"
+                          placeholder="Write your essay here..."
+                          value={writingResponses[secIdx] || ""}
+                          onChange={e => setWritingResponses(prev => ({ ...prev, [secIdx]: e.target.value }))}
+                          data-testid={`aio-writing-${secIdx}`}
+                        />
+                      </div>
+                    </div>
+                  ) : sec.type === "speaking" ? (
+                    /* ── SPEAKING ── */
+                    <div className="p-6 space-y-4">
+                      <div className="flex items-center gap-2 text-rose-600 mb-2">
+                        <Mic className="w-4 h-4" />
+                        <span className="text-sm font-semibold">Part {td.part} — {td.topic}</span>
+                      </div>
+                      {td.questions && (
+                        <div className="space-y-3">
+                          {(Array.isArray(td.questions) ? td.questions : []).map((q: any, qi: number) => (
+                            <div key={qi} className="flex items-start gap-3 p-3 rounded-lg bg-rose-50 border border-rose-100">
+                              <span className="shrink-0 w-6 h-6 rounded-full bg-rose-500 text-white flex items-center justify-center text-xs font-bold">{qi + 1}</span>
+                              <p className="text-sm text-rose-900 leading-relaxed">{typeof q === "string" ? q : (q.question || q.task || q.text || "")}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-4 rounded-lg border border-dashed border-rose-300 bg-rose-50/50 p-4 text-center">
+                        <Mic className="w-6 h-6 text-rose-400 mx-auto mb-1" />
+                        <p className="text-xs text-rose-500 font-medium">Speaking section — prepare your verbal answers</p>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Bottom combined Q navigator ── */}
+      {allNavQs.length > 0 && (
+        <div className="shrink-0 border-t bg-white shadow-lg" data-testid="aio-bottom-nav">
+          <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
+            <span className="text-xs font-semibold text-gray-600">All Questions Q1–{allNavQs.length}</span>
+            <div className="flex items-center gap-4">
+              <span className="text-xs text-gray-500">
+                Answered: <span className="font-bold text-blue-600">{answeredCount}</span>
+                <span className="text-gray-300 mx-1">·</span>
+                Unanswered: <span className="font-bold text-rose-500">{allNavQs.length - answeredCount}</span>
+              </span>
+              {!submitted && (
+                <button
+                  onClick={() => { if (window.confirm(`Submit all sections? ${allNavQs.length - answeredCount} questions unanswered.`)) submitMutation.mutate(); }}
+                  disabled={submitMutation.isPending}
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs font-bold rounded transition-colors"
+                  data-testid="button-aio-submit-bottom"
+                >
+                  {submitMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                  Submit All
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="px-3 py-2 flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+            {allNavQs.map((q, idx) => {
+              const answered = isQAnswered(q);
+              return (
+                <button
+                  key={q.id}
+                  type="button"
+                  onClick={() => scrollToQ(q)}
+                  data-testid={`aio-nav-q-${idx + 1}`}
+                  className={`w-7 h-7 rounded-full text-[11px] font-bold transition-all border-2 cursor-pointer shrink-0 ${
+                    answered
+                      ? "bg-blue-600 border-blue-600 text-white"
+                      : "bg-rose-50 border-rose-200 text-rose-400 hover:border-blue-400 hover:text-blue-600"
+                  }`}
+                >
+                  {idx + 1}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Overview / Intro Page — /fullmock/:id
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1690,8 +2145,7 @@ export default function FullMockTake() {
   const handleStart = () => {
     if (id) {
       clearProgress(id);
-      saveProgress(id, 0, []);
-      setLocation(`/fullmock/${id}/section/0`);
+      setLocation(`/fullmock/${id}/exam`);
     }
   };
 
@@ -1756,11 +2210,11 @@ export default function FullMockTake() {
               <Shield className="w-5 h-5" /> Exam Rules
             </div>
             <ul className="space-y-2 text-sm text-sky-900 dark:text-sky-200">
-              <li className="flex items-start gap-2"><ArrowLeft className="w-4 h-4 mt-0.5 shrink-0" /> Use the <strong>Back</strong> and <strong>Next</strong> buttons or the section tabs to navigate between sections freely.</li>
+              <li className="flex items-start gap-2"><ArrowLeft className="w-4 h-4 mt-0.5 shrink-0" /> All sections (Listening, Reading, Writing, Speaking) are shown on <strong>one page</strong> — scroll to move between them.</li>
+              <li className="flex items-start gap-2"><Clock className="w-4 h-4 mt-0.5 shrink-0" /> One <strong>global countdown timer</strong> runs for the entire exam — manage your time across all sections.</li>
               <li className="flex items-start gap-2"><X className="w-4 h-4 mt-0.5 shrink-0" /> Correct answers are <strong>not shown</strong> during the exam.</li>
-              <li className="flex items-start gap-2"><Clock className="w-4 h-4 mt-0.5 shrink-0" /> Each section has its own <strong>countdown timer</strong> that <strong>pauses</strong> when you navigate away and resumes when you return.</li>
-              <li className="flex items-start gap-2"><Send className="w-4 h-4 mt-0.5 shrink-0" /> Submit each section when you're ready — you can still navigate back to review submitted sections.</li>
-              <li className="flex items-start gap-2"><Trophy className="w-4 h-4 mt-0.5 shrink-0" /> Click <strong>Finish Exam</strong> when all sections are complete.</li>
+              <li className="flex items-start gap-2"><Send className="w-4 h-4 mt-0.5 shrink-0" /> Click <strong>Submit All</strong> when you are done — this submits all sections at once.</li>
+              <li className="flex items-start gap-2"><Trophy className="w-4 h-4 mt-0.5 shrink-0" /> Use the <strong>question navigator</strong> at the bottom to quickly jump to any question.</li>
             </ul>
           </div>
 
@@ -1805,29 +2259,11 @@ export default function FullMockTake() {
             })}
           </div>
 
-          {/* Action buttons */}
+          {/* Action button */}
           <div className="flex flex-col sm:flex-row gap-3">
-            {isResumable && savedProgress.step < activeSections.length ? (
-              <>
-                <Button onClick={handleResume} size="lg" className="gap-2 flex-1" data-testid="button-resume-exam">
-                  <ChevronRight className="w-5 h-5" />
-                  Resume Exam — Section {savedProgress.step + 1}
-                </Button>
-                <Button
-                  onClick={handleStart}
-                  variant="outline"
-                  size="lg"
-                  className="gap-2"
-                  data-testid="button-start-exam"
-                >
-                  Restart Exam
-                </Button>
-              </>
-            ) : (
-              <Button onClick={handleStart} size="lg" className="gap-2 flex-1" data-testid="button-start-exam">
-                <Trophy className="w-5 h-5" /> Start Full Mock Exam
-              </Button>
-            )}
+            <Button onClick={handleStart} size="lg" className="gap-2 flex-1" data-testid="button-start-exam">
+              <Trophy className="w-5 h-5" /> Start Full Mock Exam
+            </Button>
           </div>
 
         </motion.div>

@@ -13,7 +13,7 @@ import Listening from "@/pages/listening";
 import Reading from "@/pages/reading";
 import Writing from "@/pages/writing";
 import FullMock from "@/pages/fullmock";
-import FullMockTake, { FullMockSection } from "@/pages/fullmock-take";
+import FullMockTake, { FullMockSection, FullMockAllInOneExam } from "@/pages/fullmock-take";
 import Register from "@/pages/register";
 import Login from "@/pages/login";
 import Admin from "@/pages/admin";
@@ -32,6 +32,7 @@ function Router() {
       <Route path="/reading" component={Reading} />
       <Route path="/writing" component={Writing} />
       <Route path="/fullmock" component={FullMock} />
+      <Route path="/fullmock/:id/exam" component={FullMockAllInOneExam} />
       <Route path="/fullmock/:id/section/:step" component={FullMockSection} />
       <Route path="/fullmock/:id" component={FullMockTake} />
       <Route path="/register" component={Register} />
