@@ -47,8 +47,14 @@ function Router() {
 }
 
 function AppInner() {
-  const { data: user } = useQuery<User>({
+  const { data: user } = useQuery<User | null>({
     queryKey: ["/api/auth/me"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/me", { credentials: "include" });
+      if (res.status === 401) return null;
+      if (!res.ok) return null;
+      return res.json();
+    },
     retry: false,
   });
 

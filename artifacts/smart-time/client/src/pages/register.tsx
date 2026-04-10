@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BookOpen, UserPlus, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
@@ -17,6 +17,7 @@ export default function Register() {
   const [, setLocation] = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const queryClient = useQueryClient();
 
   const [form, setForm] = useState({
     fullName: "",
@@ -39,11 +40,17 @@ export default function Register() {
         parentPhone: form.parentPhone,
         email: form.email,
       });
-      return res.json();
+      await res.json();
+      const loginRes = await apiRequest("POST", "/api/auth/login", {
+        username: form.username,
+        password: form.password,
+      });
+      return loginRes.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      queryClient.setQueryData(["/api/auth/me"], data);
       toast({ title: t.auth.registerSuccess });
-      setLocation("/login");
+      setLocation("/dashboard");
     },
     onError: (err: Error) => {
       toast({ title: err.message, variant: "destructive" });
@@ -170,19 +177,19 @@ export default function Register() {
                         value={form.password}
                         onChange={(e) => setForm({ ...form, password: e.target.value })}
                         placeholder={t.auth.passwordPlaceholder}
+                        className="pr-10"
+                        autoComplete="new-password"
                         required
                         data-testid="input-password"
                       />
-                      <Button
+                      <button
                         type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-0 top-0"
+                        className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
                         onClick={() => setShowPassword(!showPassword)}
                         data-testid="button-toggle-password"
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </Button>
+                      </button>
                     </div>
                   </div>
 
@@ -195,19 +202,19 @@ export default function Register() {
                         value={form.confirmPassword}
                         onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
                         placeholder={t.auth.confirmPasswordPlaceholder}
+                        className="pr-10"
+                        autoComplete="new-password"
                         required
                         data-testid="input-confirm-password"
                       />
-                      <Button
+                      <button
                         type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-0 top-0"
+                        className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
                         onClick={() => setShowConfirm(!showConfirm)}
                         data-testid="button-toggle-confirm"
                       >
                         {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </Button>
+                      </button>
                     </div>
                   </div>
 

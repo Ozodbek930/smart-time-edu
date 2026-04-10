@@ -52,6 +52,12 @@ export default function Admin() {
     retry: false,
   });
 
+  useEffect(() => {
+    if (!userLoading && (!user || !user.isAdmin)) {
+      setLocation("/");
+    }
+  }, [user, userLoading, setLocation]);
+
   if (userLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
@@ -65,7 +71,6 @@ export default function Admin() {
   }
 
   if (!user || !user.isAdmin) {
-    setLocation("/");
     return null;
   }
 
