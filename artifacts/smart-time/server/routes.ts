@@ -40,12 +40,12 @@ const upload = multer({
   storage: fileStorage,
   limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowed = [".mp3", ".wav", ".ogg", ".m4a", ".webm", ".mp4", ".pdf"];
+    const allowed = [".mp3", ".wav", ".ogg", ".m4a", ".webm", ".mp4", ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp"];
     const ext = path.extname(file.originalname).toLowerCase();
-    if (allowed.includes(ext) || file.mimetype.startsWith("audio/") || file.mimetype.startsWith("video/webm")) {
+    if (allowed.includes(ext) || file.mimetype.startsWith("audio/") || file.mimetype.startsWith("video/webm") || file.mimetype.startsWith("image/")) {
       cb(null, true);
     } else {
-      cb(new Error("Only audio and PDF files are allowed"));
+      cb(new Error("Only audio, image, and PDF files are allowed"));
     }
   },
 });

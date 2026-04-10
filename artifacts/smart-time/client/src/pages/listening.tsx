@@ -80,6 +80,18 @@ function QuizDisplay({
               <span className="shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-sm">{qNums[q.id]}</span>
               <p className="text-sm font-medium leading-relaxed pt-0.5" data-testid={`text-listening-question-${testId}-${q.id}`}>{q.question}</p>
             </div>
+            {(q as any).imageUrl && (
+              <div className="px-4 pb-3">
+                <img
+                  src={(q as any).imageUrl}
+                  alt={(q as any).imageCaption || "Question image"}
+                  className="rounded-lg border max-h-64 object-contain w-full bg-gray-50"
+                />
+                {(q as any).imageCaption && (
+                  <p className="text-xs text-muted-foreground mt-1 text-center italic">{(q as any).imageCaption}</p>
+                )}
+              </div>
+            )}
 
             {isTextType(q.type) ? (
               <div className="px-4 pb-4 space-y-1.5">
@@ -694,6 +706,18 @@ function MultiSectionListeningExam({ test, onClose }: { test: ListeningTest; onC
                             <span className="shrink-0 w-7 h-7 rounded-full bg-blue-600/10 text-blue-600 flex items-center justify-center text-xs font-bold">{globalQNums[sIdx]?.[q.id]}</span>
                             <p className="text-sm leading-relaxed">{q.question}</p>
                           </div>
+                          {(q as any).imageUrl && (
+                            <div className="mb-3">
+                              <img
+                                src={(q as any).imageUrl}
+                                alt={(q as any).imageCaption || "Question image"}
+                                className="rounded-lg border max-h-56 object-contain w-full bg-gray-50"
+                              />
+                              {(q as any).imageCaption && (
+                                <p className="text-xs text-muted-foreground mt-1 text-center italic">{(q as any).imageCaption}</p>
+                              )}
+                            </div>
+                          )}
                           {isTextType(q.type) ? (
                             <Input placeholder="Write your answer..." className="text-sm" value={(userAnswer as string) || ""} onChange={e => handleAnswer(sIdx, q.id, e.target.value, true)} />
                           ) : (

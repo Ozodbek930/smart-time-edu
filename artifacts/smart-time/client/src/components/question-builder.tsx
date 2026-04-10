@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   DndContext,
   closestCenter,
@@ -19,7 +19,8 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   GripVertical, Trash2, ChevronDown, ChevronUp,
   Plus, CheckSquare, AlignLeft, List, Hash,
-  MessageSquare, Link2, SplitSquareVertical
+  MessageSquare, Link2, SplitSquareVertical,
+  ImagePlus, X as XIcon, Loader2
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,6 +46,8 @@ export interface BuilderQuestion {
   question: string;
   options: string[];
   correctAnswer: number | string;
+  imageUrl?: string | null;
+  imageCaption?: string;
 }
 
 const TYPE_META: Record<
@@ -110,6 +113,8 @@ function QuestionEditor({
   onChange: (updated: BuilderQuestion) => void;
 }) {
   const type = q.type || "mcq";
+  const imgInputRef = useRef<HTMLInputElement>(null);
+  const [imgUploading, setImgUploading] = useState(false);
 
   const setQuestion = (question: string) => onChange({ ...q, question });
   const setCorrect = (correctAnswer: number | string) => onChange({ ...q, correctAnswer });
@@ -122,6 +127,22 @@ function QuestionEditor({
   const removeOption = (i: number) => {
     const options = q.options.filter((_, idx) => idx !== i);
     onChange({ ...q, options, correctAnswer: 0 });
+  };
+
+  const handleImageUpload = async (file: File) => {
+    setImgUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/admin/upload", { method: "POST", body: formData, credentials: "include" });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      onChange({ ...q, imageUrl: data.url });
+    } catch {
+      alert("Image upload failed. Please try again.");
+    } finally {
+      setImgUploading(false);
+    }
   };
 
   return (
@@ -145,6 +166,55 @@ function QuestionEditor({
           rows={3}
         />
       </div>
+
+      {/* Image upload (for non-text blocks) */}
+      {type !== "text" && (
+        <div className="space-y-2">
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Image (optional)
+          </label>
+          <input
+            ref={imgInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }}
+          />
+          {q.imageUrl ? (
+            <div className="space-y-2">
+              <div className="relative inline-block rounded-lg overflow-hidden border max-w-xs">
+                <img src={q.imageUrl} alt="Question image" className="max-h-40 object-contain w-full" />
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...q, imageUrl: null })}
+                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+                  title="Remove image"
+                >
+                  <XIcon className="w-3 h-3" />
+                </button>
+              </div>
+              <Input
+                value={q.imageCaption || ""}
+                onChange={(e) => onChange({ ...q, imageCaption: e.target.value })}
+                placeholder="Image caption (optional)..."
+                className="text-xs h-7 max-w-xs"
+              />
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs gap-1.5 border-dashed"
+              onClick={() => imgInputRef.current?.click()}
+              disabled={imgUploading}
+            >
+              {imgUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ImagePlus className="w-3 h-3" />}
+              {imgUploading ? "Uploading..." : "Add Image"}
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* MCQ options */}
       {type === "mcq" && (
@@ -406,6 +476,13 @@ function SortableQuestionCard({
         <span className="flex-1 text-xs text-foreground/80 truncate min-w-0">
           {q.question || <span className="italic text-muted-foreground">Empty question…</span>}
         </span>
+
+        {/* Image indicator */}
+        {q.imageUrl && (
+          <span className="shrink-0 text-sky-500" title="Has image">
+            <ImagePlus className="w-3.5 h-3.5" />
+          </span>
+        )}
 
         {/* Action buttons */}
         <button

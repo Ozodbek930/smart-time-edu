@@ -321,6 +321,18 @@ function MockListeningQuiz({
                 <span className="shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-sm">{qNums[q.id]}</span>
                 <p className="text-sm font-medium leading-relaxed pt-0.5">{q.question}</p>
               </div>
+              {(q as any).imageUrl && (
+                <div className="px-4 pb-3">
+                  <img
+                    src={(q as any).imageUrl}
+                    alt={(q as any).imageCaption || "Question image"}
+                    className="rounded-lg border max-h-64 object-contain w-full bg-gray-50"
+                  />
+                  {(q as any).imageCaption && (
+                    <p className="text-xs text-muted-foreground mt-1 text-center italic">{(q as any).imageCaption}</p>
+                  )}
+                </div>
+              )}
               {isText(q.type) ? (
                 <div className="px-4 pb-4">
                   <Input
@@ -451,6 +463,18 @@ function MockReadingQuiz({
                 <span className="shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-sm">{qNums[q.id]}</span>
                 <p className="text-sm font-medium leading-relaxed pt-0.5">{q.question}</p>
               </div>
+              {(q as any).imageUrl && (
+                <div className="px-4 pb-3">
+                  <img
+                    src={(q as any).imageUrl}
+                    alt={(q as any).imageCaption || "Question image"}
+                    className="rounded-lg border max-h-64 object-contain w-full bg-gray-50"
+                  />
+                  {(q as any).imageCaption && (
+                    <p className="text-xs text-muted-foreground mt-1 text-center italic">{(q as any).imageCaption}</p>
+                  )}
+                </div>
+              )}
               {isText(q.type) ? (
                 <div className="px-4 pb-4">
                   <Input

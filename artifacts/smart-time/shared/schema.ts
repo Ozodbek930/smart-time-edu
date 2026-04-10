@@ -162,6 +162,8 @@ export type ListeningQuestion = {
   options: string[];
   correctAnswer: number | string;
   type?: "mcq" | "tfng" | "ynng" | "completion" | "short-answer" | "matching";
+  imageUrl?: string | null;
+  imageCaption?: string;
 };
 
 export type ReadingQuestion = {
