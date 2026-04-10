@@ -136,6 +136,8 @@ export const onlineLessonResults = pgTable("online_lesson_results", {
 export type ListeningTestSection = {
   sectionNumber: number;
   audioUrl?: string | null;
+  mapUrl?: string | null;
+  mapCaption?: string;
   questions: ListeningQuestion[];
 };
 

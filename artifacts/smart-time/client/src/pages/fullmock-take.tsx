@@ -546,6 +546,81 @@ function MockReadingQuiz({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Map / Diagram Viewer
+// ─────────────────────────────────────────────────────────────────────────────
+
+function MapViewer({ mapUrl, mapCaption }: { mapUrl: string; mapCaption?: string }) {
+  const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+
+  return (
+    <>
+      <div className="rounded-xl border-2 border-blue-200 bg-blue-50/50 overflow-hidden">
+        <div
+          className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-blue-100/60 transition-colors cursor-pointer"
+          onClick={() => setCollapsed(c => !c)}
+        >
+          <div className="flex items-center gap-2 text-sm font-semibold text-blue-800">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
+            Map / Diagram
+            {mapCaption && <span className="font-normal text-blue-600 truncate max-w-[200px]">{mapCaption}</span>}
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setOpen(true); } }}
+              className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded-md hover:bg-blue-200 transition-colors"
+            >
+              Full screen
+            </span>
+            <svg className={`w-4 h-4 text-blue-500 transition-transform ${collapsed ? "-rotate-90" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </div>
+        </div>
+        {!collapsed && (
+          <div
+            className="px-3 pb-3 cursor-zoom-in"
+            onClick={() => setOpen(true)}
+          >
+            <img
+              src={mapUrl}
+              alt={mapCaption || "Map"}
+              className="w-full rounded-lg border border-blue-200 object-contain max-h-64 bg-white"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Full-screen lightbox */}
+      {open && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setOpen(false)}
+        >
+          <div className="relative max-w-5xl max-h-full w-full" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setOpen(false)}
+              className="absolute -top-10 right-0 text-white/80 hover:text-white text-sm flex items-center gap-1"
+            >
+              <X className="w-5 h-5" /> Close
+            </button>
+            <img
+              src={mapUrl}
+              alt={mapCaption || "Map"}
+              className="w-full max-h-[85vh] object-contain rounded-lg"
+            />
+            {mapCaption && (
+              <p className="text-center text-white/70 text-sm mt-3 italic">{mapCaption}</p>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Listening Section Exam
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -630,6 +705,10 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
                       <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Audio</p>
                       <audio controls className="w-full h-9 rounded" src={sec.audioUrl} data-testid={`mock-audio-sec-${sIdx}`} />
                     </div>
+                  )}
+                  {/* Map / Diagram */}
+                  {sec.mapUrl && (
+                    <MapViewer mapUrl={sec.mapUrl} mapCaption={sec.mapCaption} />
                   )}
                   {/* Questions */}
                   <MockListeningQuiz

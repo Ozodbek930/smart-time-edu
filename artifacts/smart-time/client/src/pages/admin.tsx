@@ -675,10 +675,10 @@ function ListeningTestsTab() {
   );
 }
 
-type ListeningSectionState = { audioUrl: string; questions: BuilderQuestion[] };
+type ListeningSectionState = { audioUrl: string; mapUrl?: string; mapCaption?: string; questions: BuilderQuestion[] };
 
 function emptyListeningSection(sectionNumber: number): ListeningSectionState {
-  return { audioUrl: "", questions: [{ id: 1, question: "", options: ["", "", "", ""], correctAnswer: 0 }] };
+  return { audioUrl: "", mapUrl: "", mapCaption: "", questions: [{ id: 1, question: "", options: ["", "", "", ""], correctAnswer: 0 }] };
 }
 
 function ListeningTestDialog({ open, onOpenChange, test, onSave, isPending }: {
@@ -711,12 +711,14 @@ function ListeningTestDialog({ open, onOpenChange, test, onSave, isPending }: {
         setNumSections(ts.length);
         setSections(ts.map(s => ({
           audioUrl: s.audioUrl || "",
+          mapUrl: (s as any).mapUrl || "",
+          mapCaption: (s as any).mapCaption || "",
           questions: (s.questions as BuilderQuestion[]).length > 0 ? s.questions as BuilderQuestion[] : [{ id: 1, question: "", options: ["", "", "", ""], correctAnswer: 0 }],
         })));
       } else {
         const flat = ((test.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]) as BuilderQuestion[];
         setNumSections(1);
-        setSections([{ audioUrl: test.audioUrl || "", questions: flat.length > 0 ? flat : [{ id: 1, question: "", options: ["", "", "", ""], correctAnswer: 0 }] }]);
+        setSections([{ audioUrl: test.audioUrl || "", mapUrl: "", mapCaption: "", questions: flat.length > 0 ? flat : [{ id: 1, question: "", options: ["", "", "", ""], correctAnswer: 0 }] }]);
       }
     } else {
       setTitle(""); setTopic(""); setDescription(""); setDifficulty("Easy"); setDuration("10"); setMode("test");
@@ -856,6 +858,44 @@ function ListeningTestDialog({ open, onOpenChange, test, onSave, isPending }: {
                   )}
                 </div>
 
+                {/* Map / Diagram image upload */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-1.5">
+                    <span>Map / Diagram Image</span>
+                    <span className="text-xs text-muted-foreground font-normal">(optional — shown to student during exam)</span>
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <FileUploadButton
+                      onUploaded={(url) => updateSection(idx, { mapUrl: url })}
+                      accept="image/*"
+                      label="Upload Map"
+                      icon={Eye}
+                    />
+                    {sec.mapUrl && (
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <Badge variant="secondary" className="gap-1 max-w-full truncate">
+                          <Eye className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{sec.mapUrl.split("/").pop()}</span>
+                        </Badge>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => updateSection(idx, { mapUrl: "", mapCaption: "" })}>
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  {sec.mapUrl && (
+                    <div className="space-y-2">
+                      <img src={sec.mapUrl} alt="Map preview" className="w-full max-h-48 object-contain rounded-lg border bg-gray-50" />
+                      <Input
+                        value={sec.mapCaption || ""}
+                        onChange={(e) => updateSection(idx, { mapCaption: e.target.value })}
+                        placeholder="Map caption / instructions (optional)..."
+                        className="text-xs"
+                      />
+                    </div>
+                  )}
+                </div>
+
                 {/* Questions */}
                 {(mode === "test" || mode === "mixed") && (
                   <div className="space-y-1.5">
@@ -883,6 +923,8 @@ function ListeningTestDialog({ open, onOpenChange, test, onSave, isPending }: {
               const testSections: ListeningTestSection[] = sections.map((s, i) => ({
                 sectionNumber: i + 1,
                 audioUrl: s.audioUrl || null,
+                mapUrl: s.mapUrl || null,
+                mapCaption: s.mapCaption || "",
                 questions: (mode === "test" || mode === "mixed") ? s.questions : [],
               }));
               onSave({
