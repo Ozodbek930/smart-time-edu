@@ -1655,6 +1655,276 @@ export function FullMockSection() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Speaking AIO Section — full speaking exam flow with timer phases
+// ─────────────────────────────────────────────────────────────────────────────
+
+type SpeakingPhase =
+  | { type: "start" }
+  | { type: "warmup" }
+  | { type: "part_active"; partIdx: number }
+  | { type: "part_prep"; partIdx: number }
+  | { type: "done" };
+
+function SpeakingCountdown({ seconds, label, onDone, color = "blue" }: {
+  seconds: number;
+  label: string;
+  onDone: () => void;
+  color?: "rose" | "blue" | "amber";
+}) {
+  const [remaining, setRemaining] = useState(seconds);
+  const done = useRef(false);
+
+  useEffect(() => {
+    if (seconds <= 0) { onDone(); return; }
+    const id = setInterval(() => {
+      setRemaining(r => {
+        if (r <= 1) {
+          clearInterval(id);
+          if (!done.current) { done.current = true; setTimeout(onDone, 300); }
+          return 0;
+        }
+        return r - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const pct = seconds > 0 ? (remaining / seconds) * 100 : 0;
+  const colorMap = {
+    rose:  { ring: "stroke-rose-500",  bg: "bg-rose-50",  text: "text-rose-700",  btn: "bg-rose-600 hover:bg-rose-700" },
+    blue:  { ring: "stroke-blue-500",  bg: "bg-blue-50",  text: "text-blue-700",  btn: "bg-blue-600 hover:bg-blue-700" },
+    amber: { ring: "stroke-amber-500", bg: "bg-amber-50", text: "text-amber-700", btn: "bg-amber-600 hover:bg-amber-700" },
+  };
+  const c = colorMap[color];
+  const mins = Math.floor(remaining / 60);
+  const secs = remaining % 60;
+
+  return (
+    <div className={`flex flex-col items-center justify-center py-10 px-6 ${c.bg} rounded-2xl border border-opacity-30 space-y-4`}>
+      <p className={`text-sm font-semibold uppercase tracking-widest ${c.text}`}>{label}</p>
+      <div className="relative w-24 h-24">
+        <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
+          <circle cx="48" cy="48" r="40" fill="none" stroke="#e5e7eb" strokeWidth="8" />
+          <circle cx="48" cy="48" r="40" fill="none" strokeWidth="8" strokeLinecap="round"
+            strokeDasharray={`${2 * Math.PI * 40}`}
+            strokeDashoffset={`${2 * Math.PI * 40 * (1 - pct / 100)}`}
+            className={c.ring}
+            style={{ transition: "stroke-dashoffset 1s linear" }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className={`text-xl font-bold font-mono ${c.text}`}>
+            {mins > 0 ? `${mins}:${String(secs).padStart(2, "0")}` : String(secs)}
+          </span>
+        </div>
+      </div>
+      <button onClick={() => { done.current = true; onDone(); }} className={`px-4 py-2 text-white text-xs font-semibold rounded-lg ${c.btn} transition-colors`}>
+        Skip →
+      </button>
+    </div>
+  );
+}
+
+function SpeakingAIOSection({ parts }: { parts: SpeakingTest[] }) {
+  const [phase, setPhase] = useState<SpeakingPhase>({ type: "start" });
+  const { isRecording, audioUrl, duration: recDuration, error: recError, startRecording, stopRecording, reset: resetRec } = useAudioRecorder();
+  const [recordings, setRecordings] = useState<Record<number, string | null>>({});
+
+  if (parts.length === 0) return null;
+
+  const firstPart = parts[0];
+  const warmupSec = (firstPart.warmupDuration ?? 60);
+  const currentPart = phase.type === "part_active" || phase.type === "part_prep"
+    ? parts[phase.partIdx]
+    : null;
+  const isLastPart = (phase.type === "part_active" || phase.type === "part_prep") && phase.partIdx >= parts.length - 1;
+
+  const goToPartActive = (partIdx: number) => setPhase({ type: "part_active", partIdx });
+  const goToPartPrep = (partIdx: number) => setPhase({ type: "part_prep", partIdx });
+  const goNext = () => {
+    if (phase.type !== "part_active") return;
+    if (isLastPart) { setPhase({ type: "done" }); }
+    else { goToPartPrep(phase.partIdx); }
+  };
+
+  // Save recording when done
+  useEffect(() => {
+    if (audioUrl && (phase.type === "part_active")) {
+      setRecordings(prev => ({ ...prev, [phase.partIdx]: audioUrl }));
+    }
+  }, [audioUrl]);
+
+  if (phase.type === "start") {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-6 space-y-6">
+        <div className="w-16 h-16 rounded-full bg-rose-100 border-4 border-rose-300 flex items-center justify-center">
+          <Mic className="w-8 h-8 text-rose-600" />
+        </div>
+        <div className="text-center space-y-1">
+          <h3 className="text-lg font-bold text-gray-900">Speaking Exam</h3>
+          <p className="text-sm text-gray-500">{parts.length} part{parts.length !== 1 ? "s" : ""} · {warmupSec > 0 ? `${warmupSec}s warm-up` : "No warm-up"}</p>
+        </div>
+        {firstPart.tips?.length > 0 && (
+          <ul className="text-sm text-gray-600 space-y-1 max-w-sm">
+            {firstPart.tips.map((t, i) => <li key={i} className="flex items-start gap-2"><span className="text-rose-400">•</span>{t}</li>)}
+          </ul>
+        )}
+        <button
+          onClick={() => warmupSec > 0 ? setPhase({ type: "warmup" }) : goToPartActive(0)}
+          className="flex items-center gap-2 px-8 py-3 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm transition-colors shadow-lg shadow-rose-200"
+          data-testid="button-speaking-start"
+        >
+          <Mic className="w-4 h-4" /> Start Speaking Exam
+        </button>
+      </div>
+    );
+  }
+
+  if (phase.type === "warmup") {
+    return (
+      <div className="py-8 px-6">
+        <div className="max-w-sm mx-auto space-y-4">
+          <h3 className="text-center font-bold text-gray-900">Warm-Up / Training Time</h3>
+          <p className="text-center text-sm text-gray-500">Use this time to prepare. Part 1 will begin automatically.</p>
+          <SpeakingCountdown
+            seconds={warmupSec}
+            label="Warm-Up"
+            color="amber"
+            onDone={() => goToPartActive(0)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (phase.type === "part_prep") {
+    const prepSec = (parts[phase.partIdx + 1]?.prepDuration ?? 60);
+    const nextPart = parts[phase.partIdx + 1];
+    return (
+      <div className="py-8 px-6">
+        <div className="max-w-sm mx-auto space-y-4">
+          <h3 className="text-center font-bold text-gray-900">Preparation — Part {nextPart?.part || (phase.partIdx + 2)}</h3>
+          <p className="text-center text-sm text-gray-500">Get ready for the next part. It will begin automatically.</p>
+          <SpeakingCountdown
+            seconds={prepSec}
+            label={`Preparing Part ${nextPart?.part || phase.partIdx + 2}`}
+            color="blue"
+            onDone={() => goToPartActive(phase.partIdx + 1)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (phase.type === "done") {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 px-6 space-y-4">
+        <div className="w-16 h-16 rounded-full bg-green-100 border-4 border-green-300 flex items-center justify-center">
+          <CheckCircle className="w-8 h-8 text-green-600" />
+        </div>
+        <h3 className="text-lg font-bold text-gray-900">Speaking Complete</h3>
+        <p className="text-sm text-gray-500">All {parts.length} part{parts.length !== 1 ? "s" : ""} finished.</p>
+        <div className="space-y-2 w-full max-w-sm">
+          {Object.entries(recordings).map(([idx, url]) => url && (
+            <div key={idx} className="rounded-lg border p-3 bg-rose-50">
+              <p className="text-xs font-semibold text-gray-600 mb-1">Part {parts[parseInt(idx)]?.part} Recording</p>
+              <audio controls src={url} className="w-full h-8 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // part_active
+  if (phase.type === "part_active") {
+    const pt = parts[phase.partIdx];
+    const ptImages = pt.questionImages || [];
+    return (
+      <div className="p-6 space-y-5">
+        {/* Part header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-rose-600 text-white flex items-center justify-center text-sm font-bold">{pt.part}</div>
+            <div>
+              <p className="font-bold text-gray-900 text-sm">Part {pt.part}</p>
+              <p className="text-xs text-gray-500">{pt.topic}</p>
+            </div>
+          </div>
+          <div className="text-xs text-gray-400">{phase.partIdx + 1}/{parts.length}</div>
+        </div>
+
+        {/* Questions */}
+        <div className="space-y-3">
+          {pt.questions.map((q, qi) => {
+            const img = ptImages[qi];
+            return (
+              <div key={qi} className="rounded-xl border-2 border-rose-100 bg-white overflow-hidden">
+                <div className="flex items-start gap-3 px-4 pt-4 pb-3">
+                  <span className="shrink-0 w-7 h-7 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs font-bold shadow-sm">{qi + 1}</span>
+                  <p className="text-sm font-medium leading-relaxed pt-0.5">{q}</p>
+                </div>
+                {img?.url && (
+                  <div className="px-4 pb-4">
+                    <img src={img.url} alt={img.caption || `Question ${qi + 1} image`} className="rounded-lg border max-h-56 object-contain w-full bg-gray-50" />
+                    {img.caption && <p className="text-xs text-gray-500 mt-1 text-center italic">{img.caption}</p>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Recording panel */}
+        <div className="rounded-xl border-2 border-rose-200 bg-rose-50/40 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Mic className="w-4 h-4 text-rose-600" />
+            <span className="text-sm font-semibold text-rose-700">Record Your Answer</span>
+          </div>
+          {recError && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{recError}</div>}
+          {!audioUrl ? (
+            <div className="flex items-center gap-3 flex-wrap">
+              {!isRecording ? (
+                <button onClick={startRecording} className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-semibold transition-colors" data-testid="aio-speaking-start-rec">
+                  <Mic className="w-3.5 h-3.5" /> Start Recording
+                </button>
+              ) : (
+                <>
+                  <motion.div className="w-3 h-3 rounded-full bg-red-500" animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1, repeat: Infinity }} />
+                  <span className="text-sm font-mono text-red-600 font-bold">{formatDur(recDuration)}</span>
+                  <button onClick={stopRecording} className="flex items-center gap-2 px-4 py-2 border-2 border-red-300 text-red-600 hover:bg-red-50 rounded-lg text-sm font-semibold transition-colors" data-testid="aio-speaking-stop-rec">
+                    <Square className="w-3 h-3 fill-current" /> Stop
+                  </button>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <audio controls src={audioUrl} className="w-full h-10 rounded-lg" />
+              <button onClick={resetRec} className="text-xs text-gray-500 hover:text-gray-700 underline" data-testid="aio-speaking-re-record">Re-record</button>
+            </div>
+          )}
+        </div>
+
+        {/* Next / Done button */}
+        <div className="flex justify-end">
+          <button
+            onClick={goNext}
+            className="flex items-center gap-2 px-6 py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm font-semibold transition-colors"
+            data-testid="aio-speaking-next-part"
+          >
+            {isLastPart ? "Finish Speaking" : `Next: Part ${parts[phase.partIdx + 1]?.part}`}
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // All-in-One Exam — /fullmock/:id/exam
 // All sections (Listening, Reading, Writing, Speaking) on one scrollable page
 // with a single global timer and a single Submit All button.
@@ -1694,6 +1964,16 @@ export function FullMockAllInOneExam() {
   const [fontSize, setFontSize] = useState(14);
 
   const totalDuration = activeSections.reduce((sum, s) => sum + ((s.testData as any)?.duration || 0), 0);
+
+  // Collect all speaking parts in order for SpeakingAIOSection
+  const allSpeakingParts = useMemo(() =>
+    activeSections.filter(s => s.type === "speaking" && s.testData).map(s => s.testData as SpeakingTest),
+    [activeSections]
+  );
+  const firstSpeakingIdx = useMemo(() =>
+    activeSections.findIndex(s => s.type === "speaking"),
+    [activeSections]
+  );
 
   const submittedRef = useRef(false);
 
@@ -2030,27 +2310,10 @@ export function FullMockAllInOneExam() {
                       </div>
                     </div>
                   ) : sec.type === "speaking" ? (
-                    /* ── SPEAKING ── */
-                    <div className="p-6 space-y-4">
-                      <div className="flex items-center gap-2 text-rose-600 mb-2">
-                        <Mic className="w-4 h-4" />
-                        <span className="text-sm font-semibold">Part {td.part} — {td.topic}</span>
-                      </div>
-                      {td.questions && (
-                        <div className="space-y-3">
-                          {(Array.isArray(td.questions) ? td.questions : []).map((q: any, qi: number) => (
-                            <div key={qi} className="flex items-start gap-3 p-3 rounded-lg bg-rose-50 border border-rose-100">
-                              <span className="shrink-0 w-6 h-6 rounded-full bg-rose-500 text-white flex items-center justify-center text-xs font-bold">{qi + 1}</span>
-                              <p className="text-sm text-rose-900 leading-relaxed">{typeof q === "string" ? q : (q.question || q.task || q.text || "")}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <div className="mt-4 rounded-lg border border-dashed border-rose-300 bg-rose-50/50 p-4 text-center">
-                        <Mic className="w-6 h-6 text-rose-400 mx-auto mb-1" />
-                        <p className="text-xs text-rose-500 font-medium">Speaking section — prepare your verbal answers</p>
-                      </div>
-                    </div>
+                    /* ── SPEAKING ── rendered only for the first speaking section (all parts together) */
+                    secIdx === firstSpeakingIdx ? (
+                      <SpeakingAIOSection parts={allSpeakingParts} />
+                    ) : null
                   ) : null}
                 </div>
               </div>
@@ -2088,7 +2351,7 @@ export function FullMockAllInOneExam() {
               const answered = isQAnswered(q);
               return (
                 <button
-                  key={q.id}
+                  key={`nav-${q.secIdx}-${q.id}-${idx}`}
                   type="button"
                   onClick={() => scrollToQ(q)}
                   data-testid={`aio-nav-q-${idx + 1}`}

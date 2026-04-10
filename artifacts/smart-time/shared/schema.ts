@@ -13,6 +13,8 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").notNull().default(false),
 });
 
+export type SpeakingQuestionImage = { url?: string; caption?: string } | null;
+
 export const speakingTests = pgTable("speaking_tests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
@@ -20,9 +22,12 @@ export const speakingTests = pgTable("speaking_tests", {
   topic: text("topic").notNull(),
   description: text("description").notNull(),
   questions: text("questions").array().notNull(),
+  questionImages: jsonb("question_images").$type<SpeakingQuestionImage[]>().default([]),
   tips: text("tips").array().notNull(),
   difficulty: text("difficulty").notNull(),
   duration: integer("duration").notNull(),
+  warmupDuration: integer("warmup_duration").default(60),
+  prepDuration: integer("prep_duration").default(60),
 });
 
 export const listeningTests = pgTable("listening_tests", {

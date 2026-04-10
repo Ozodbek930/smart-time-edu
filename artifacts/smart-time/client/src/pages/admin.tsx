@@ -472,6 +472,8 @@ function SpeakingTestsTab() {
   );
 }
 
+type SpeakingQEntry = { text: string; imageUrl: string; imageCaption: string };
+
 function SpeakingTestDialog({ open, onOpenChange, test, onSave, isPending }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -483,10 +485,13 @@ function SpeakingTestDialog({ open, onOpenChange, test, onSave, isPending }: {
   const [part, setPart] = useState("1");
   const [topic, setTopic] = useState("");
   const [description, setDescription] = useState("");
-  const [questions, setQuestions] = useState("");
+  const [qEntries, setQEntries] = useState<SpeakingQEntry[]>([{ text: "", imageUrl: "", imageCaption: "" }]);
   const [tips, setTips] = useState("");
   const [difficulty, setDifficulty] = useState("Easy");
   const [duration, setDuration] = useState("5");
+  const [warmupDuration, setWarmupDuration] = useState("60");
+  const [prepDuration, setPrepDuration] = useState("60");
+  const [expandedImg, setExpandedImg] = useState<number | null>(null);
 
   const resetForm = () => {
     if (test) {
@@ -494,24 +499,54 @@ function SpeakingTestDialog({ open, onOpenChange, test, onSave, isPending }: {
       setPart(String(test.part));
       setTopic(test.topic);
       setDescription(test.description);
-      setQuestions(test.questions.join("\n"));
+      const imgs: Array<{ url?: string; caption?: string } | null> = (test as any).questionImages || [];
+      setQEntries((test.questions.length > 0 ? test.questions : [""]).map((q, i) => ({
+        text: q,
+        imageUrl: imgs[i]?.url || "",
+        imageCaption: imgs[i]?.caption || "",
+      })));
       setTips(test.tips.join("\n"));
       setDifficulty(test.difficulty);
       setDuration(String(test.duration));
+      setWarmupDuration(String((test as any).warmupDuration ?? 60));
+      setPrepDuration(String((test as any).prepDuration ?? 60));
     } else {
       setTitle(""); setPart("1"); setTopic(""); setDescription("");
-      setQuestions(""); setTips(""); setDifficulty("Easy"); setDuration("5");
+      setQEntries([{ text: "", imageUrl: "", imageCaption: "" }]);
+      setTips(""); setDifficulty("Easy"); setDuration("5");
+      setWarmupDuration("60"); setPrepDuration("60");
     }
+    setExpandedImg(null);
+  };
+
+  const addQuestion = () => setQEntries(prev => [...prev, { text: "", imageUrl: "", imageCaption: "" }]);
+  const removeQuestion = (i: number) => setQEntries(prev => prev.filter((_, idx) => idx !== i));
+  const updateQ = (i: number, field: keyof SpeakingQEntry, val: string) =>
+    setQEntries(prev => prev.map((q, idx) => idx === i ? { ...q, [field]: val } : q));
+
+  const handleSave = () => {
+    const questionTexts = qEntries.map(q => q.text).filter(Boolean);
+    const questionImages = qEntries.map(q => q.imageUrl ? { url: q.imageUrl, caption: q.imageCaption } : null);
+    onSave({
+      title, part: parseInt(part), topic, description,
+      questions: questionTexts,
+      questionImages,
+      tips: tips.split("\n").filter(Boolean),
+      difficulty, duration: parseInt(duration),
+      warmupDuration: parseInt(warmupDuration) || 60,
+      prepDuration: parseInt(prepDuration) || 60,
+    });
   };
 
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (v) resetForm(); }}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto max-w-lg" data-testid="dialog-speaking-test">
+      <DialogContent className="max-h-[90vh] overflow-y-auto max-w-xl" data-testid="dialog-speaking-test">
         <DialogHeader>
           <DialogTitle>{test ? "Edit Speaking Test" : "Add Speaking Test"}</DialogTitle>
-          <DialogDescription>Fill in the details for the speaking test</DialogDescription>
+          <DialogDescription>Configure speaking test details, questions with optional images, and timing</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          {/* Title + Part */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Title</label>
@@ -529,6 +564,7 @@ function SpeakingTestDialog({ open, onOpenChange, test, onSave, isPending }: {
               </Select>
             </div>
           </div>
+          {/* Topic + Difficulty */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Topic</label>
@@ -546,32 +582,103 @@ function SpeakingTestDialog({ open, onOpenChange, test, onSave, isPending }: {
               </Select>
             </div>
           </div>
+          {/* Description */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Description</label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} data-testid="input-speaking-description" />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">Questions (one per line)</label>
-            <Textarea value={questions} onChange={(e) => setQuestions(e.target.value)} className="min-h-[100px]" data-testid="input-speaking-questions" />
+
+          {/* ── Questions with optional image ── */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Questions</label>
+              <Button type="button" variant="outline" size="sm" onClick={addQuestion} className="h-7 text-xs">+ Add Question</Button>
+            </div>
+            <div className="space-y-3">
+              {qEntries.map((q, i) => (
+                <div key={i} className="rounded-xl border border-rose-100 bg-rose-50/40 p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="shrink-0 w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs font-bold">{i + 1}</span>
+                    <Input
+                      value={q.text}
+                      onChange={(e) => updateQ(i, "text", e.target.value)}
+                      placeholder="Question text..."
+                      className="flex-1 text-sm h-8"
+                      data-testid={`input-speaking-q-${i}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setExpandedImg(expandedImg === i ? null : i)}
+                      className={`shrink-0 px-2 py-1 text-xs rounded border transition-colors ${q.imageUrl ? "border-rose-400 bg-rose-100 text-rose-700" : "border-gray-300 text-gray-500 hover:border-rose-300"}`}
+                      title="Toggle image"
+                    >
+                      🖼
+                    </button>
+                    {qEntries.length > 1 && (
+                      <button type="button" onClick={() => removeQuestion(i)} className="shrink-0 text-gray-400 hover:text-red-500 text-xs px-1">✕</button>
+                    )}
+                  </div>
+                  {expandedImg === i && (
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <div className="space-y-1">
+                        <label className="text-[11px] text-gray-500 font-medium">Image URL</label>
+                        <Input
+                          value={q.imageUrl}
+                          onChange={(e) => updateQ(i, "imageUrl", e.target.value)}
+                          placeholder="https://..."
+                          className="text-xs h-7"
+                          data-testid={`input-speaking-img-url-${i}`}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] text-gray-500 font-medium">Caption</label>
+                        <Input
+                          value={q.imageCaption}
+                          onChange={(e) => updateQ(i, "imageCaption", e.target.value)}
+                          placeholder="Optional caption..."
+                          className="text-xs h-7"
+                          data-testid={`input-speaking-img-caption-${i}`}
+                        />
+                      </div>
+                      {q.imageUrl && (
+                        <div className="col-span-2">
+                          <img src={q.imageUrl} alt="preview" className="max-h-28 rounded border object-contain bg-gray-50" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* Tips */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Tips (one per line)</label>
             <Textarea value={tips} onChange={(e) => setTips(e.target.value)} data-testid="input-speaking-tips" />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">Duration (minutes)</label>
-            <Input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} data-testid="input-speaking-duration" />
+
+          {/* Duration + Timing */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Duration (min)</label>
+              <Input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} data-testid="input-speaking-duration" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Warm-Up (sec)</label>
+              <Input type="number" value={warmupDuration} onChange={(e) => setWarmupDuration(e.target.value)} placeholder="60" data-testid="input-speaking-warmup" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Prep Time (sec)</label>
+              <Input type="number" value={prepDuration} onChange={(e) => setPrepDuration(e.target.value)} placeholder="60" data-testid="input-speaking-prep" />
+            </div>
           </div>
+          <p className="text-[11px] text-gray-500">Warm-Up = training time before Part 1. Prep Time = countdown between parts.</p>
         </div>
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} data-testid="button-cancel-speaking">Cancel</Button>
           <Button
-            onClick={() => onSave({
-              title, part: parseInt(part), topic, description,
-              questions: questions.split("\n").filter(Boolean),
-              tips: tips.split("\n").filter(Boolean),
-              difficulty, duration: parseInt(duration),
-            })}
+            onClick={handleSave}
             disabled={isPending || !title.trim()}
             className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
             data-testid="button-save-speaking"
