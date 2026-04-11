@@ -472,6 +472,126 @@ function SpeakingTestsTab() {
   );
 }
 
+// ─── Reusable file-upload + URL field ────────────────────────────────────────
+function FileUploadField({
+  label,
+  value,
+  onChange,
+  accept,
+  hint,
+  testId,
+}: {
+  label: string;
+  value: string;
+  onChange: (url: string) => void;
+  accept: string;
+  hint?: string;
+  testId?: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+  const { toast } = useToast();
+
+  const handleFile = async (file: File) => {
+    setError("");
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || "Upload failed");
+      }
+      const data = await res.json();
+      onChange(data.url || data.fileUrl || "");
+      toast({ title: "Uploaded", description: file.name });
+    } catch (e: any) {
+      setError(e.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const isImage = accept.includes("image");
+  const isPdf = accept.includes("pdf");
+
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{label}</label>
+      <div className="flex items-center gap-2">
+        <input
+          ref={inputRef}
+          type="file"
+          accept={accept}
+          className="hidden"
+          data-testid={testId}
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (file) await handleFile(file);
+            e.target.value = "";
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors shrink-0"
+        >
+          {uploading ? (
+            <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+          ) : (
+            <Upload className="w-3.5 h-3.5" />
+          )}
+          {uploading ? "Uploading..." : "Upload file"}
+        </button>
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={isPdf ? "https://... or upload above" : "https://... or upload above"}
+          className="flex-1 text-xs h-8"
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="shrink-0 text-gray-400 hover:text-red-500 transition-colors"
+            title="Clear"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+      {hint && <p className="text-[11px] text-gray-400">{hint}</p>}
+      {error && <p className="text-[11px] text-red-500">{error}</p>}
+      {/* Preview */}
+      {value && isImage && (
+        <img
+          src={value}
+          alt="preview"
+          className="mt-1 max-h-40 rounded-lg border object-contain bg-gray-50 w-full"
+          onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
+        />
+      )}
+      {value && isPdf && (
+        <a
+          href={value}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1 inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline"
+        >
+          📄 Preview PDF
+        </a>
+      )}
+    </div>
+  );
+}
+
 type SpeakingQEntry = { text: string; imageUrl: string; imageCaption: string };
 
 function SpeakingTestDialog({ open, onOpenChange, test, onSave, isPending }: {
@@ -626,19 +746,17 @@ function SpeakingTestDialog({ open, onOpenChange, test, onSave, isPending }: {
                     )}
                   </div>
                   {expandedImg === i && (
-                    <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div className="space-y-2 pt-1">
+                      <FileUploadField
+                        label={`Question ${i + 1} Image`}
+                        value={q.imageUrl}
+                        onChange={(url) => updateQ(i, "imageUrl", url)}
+                        accept="image/*"
+                        hint="Optional: JPG, PNG, WebP — shown with this question"
+                        testId={`input-speaking-img-upload-${i}`}
+                      />
                       <div className="space-y-1">
-                        <label className="text-[11px] text-gray-500 font-medium">Image URL</label>
-                        <Input
-                          value={q.imageUrl}
-                          onChange={(e) => updateQ(i, "imageUrl", e.target.value)}
-                          placeholder="https://..."
-                          className="text-xs h-7"
-                          data-testid={`input-speaking-img-url-${i}`}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[11px] text-gray-500 font-medium">Caption</label>
+                        <label className="text-[11px] text-gray-500 font-medium uppercase tracking-wide">Caption</label>
                         <Input
                           value={q.imageCaption}
                           onChange={(e) => updateQ(i, "imageCaption", e.target.value)}
@@ -647,11 +765,6 @@ function SpeakingTestDialog({ open, onOpenChange, test, onSave, isPending }: {
                           data-testid={`input-speaking-img-caption-${i}`}
                         />
                       </div>
-                      {q.imageUrl && (
-                        <div className="col-span-2">
-                          <img src={q.imageUrl} alt="preview" className="max-h-28 rounded border object-contain bg-gray-50" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
@@ -660,43 +773,24 @@ function SpeakingTestDialog({ open, onOpenChange, test, onSave, isPending }: {
           </div>
 
           {/* ── Test-level image & PDF ── */}
-          <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-3 space-y-3">
-            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Test Card / Attachment (optional)</p>
-            <div className="space-y-2">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600 flex items-center gap-1">🖼 Image URL <span className="text-gray-400 font-normal">(cue card, map, diagram)</span></label>
-                <Input
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="https://example.com/cuecard.jpg"
-                  className="text-sm"
-                  data-testid="input-speaking-image-url"
-                />
-              </div>
-              {imageUrl && (
-                <img
-                  src={imageUrl}
-                  alt="Test image preview"
-                  className="max-h-36 rounded-lg border object-contain bg-white w-full"
-                  onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
-                />
-              )}
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600 flex items-center gap-1">📄 PDF URL <span className="text-gray-400 font-normal">(task sheet, supplementary)</span></label>
-                <Input
-                  value={pdfUrl}
-                  onChange={(e) => setPdfUrl(e.target.value)}
-                  placeholder="https://example.com/tasksheet.pdf"
-                  className="text-sm"
-                  data-testid="input-speaking-pdf-url"
-                />
-              </div>
-              {pdfUrl && (
-                <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 underline">
-                  📄 Preview PDF
-                </a>
-              )}
-            </div>
+          <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-4 space-y-3">
+            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">🖼 Cue Card / Task Sheet (optional)</p>
+            <FileUploadField
+              label="Image (cue card, map, diagram)"
+              value={imageUrl}
+              onChange={setImageUrl}
+              accept="image/*"
+              hint="Supported: JPG, PNG, WebP, GIF — max 50 MB"
+              testId="input-speaking-image-upload"
+            />
+            <FileUploadField
+              label="PDF (task sheet, supplementary)"
+              value={pdfUrl}
+              onChange={setPdfUrl}
+              accept="application/pdf,.pdf"
+              hint="PDF — max 50 MB"
+              testId="input-speaking-pdf-upload"
+            />
           </div>
 
           {/* Tips */}
