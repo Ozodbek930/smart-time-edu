@@ -491,6 +491,8 @@ function SpeakingTestDialog({ open, onOpenChange, test, onSave, isPending }: {
   const [duration, setDuration] = useState("5");
   const [warmupDuration, setWarmupDuration] = useState("60");
   const [prepDuration, setPrepDuration] = useState("60");
+  const [imageUrl, setImageUrl] = useState("");
+  const [pdfUrl, setPdfUrl] = useState("");
   const [expandedImg, setExpandedImg] = useState<number | null>(null);
 
   const resetForm = () => {
@@ -510,11 +512,14 @@ function SpeakingTestDialog({ open, onOpenChange, test, onSave, isPending }: {
       setDuration(String(test.duration));
       setWarmupDuration(String((test as any).warmupDuration ?? 60));
       setPrepDuration(String((test as any).prepDuration ?? 60));
+      setImageUrl((test as any).imageUrl || "");
+      setPdfUrl((test as any).pdfUrl || "");
     } else {
       setTitle(""); setPart("1"); setTopic(""); setDescription("");
       setQEntries([{ text: "", imageUrl: "", imageCaption: "" }]);
       setTips(""); setDifficulty("Easy"); setDuration("5");
       setWarmupDuration("60"); setPrepDuration("60");
+      setImageUrl(""); setPdfUrl("");
     }
     setExpandedImg(null);
   };
@@ -531,6 +536,8 @@ function SpeakingTestDialog({ open, onOpenChange, test, onSave, isPending }: {
       title, part: parseInt(part), topic, description,
       questions: questionTexts,
       questionImages,
+      imageUrl: imageUrl.trim() || null,
+      pdfUrl: pdfUrl.trim() || null,
       tips: tips.split("\n").filter(Boolean),
       difficulty, duration: parseInt(duration),
       warmupDuration: parseInt(warmupDuration) || 60,
@@ -649,6 +656,46 @@ function SpeakingTestDialog({ open, onOpenChange, test, onSave, isPending }: {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* ── Test-level image & PDF ── */}
+          <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-3 space-y-3">
+            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Test Card / Attachment (optional)</p>
+            <div className="space-y-2">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600 flex items-center gap-1">🖼 Image URL <span className="text-gray-400 font-normal">(cue card, map, diagram)</span></label>
+                <Input
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://example.com/cuecard.jpg"
+                  className="text-sm"
+                  data-testid="input-speaking-image-url"
+                />
+              </div>
+              {imageUrl && (
+                <img
+                  src={imageUrl}
+                  alt="Test image preview"
+                  className="max-h-36 rounded-lg border object-contain bg-white w-full"
+                  onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
+                />
+              )}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600 flex items-center gap-1">📄 PDF URL <span className="text-gray-400 font-normal">(task sheet, supplementary)</span></label>
+                <Input
+                  value={pdfUrl}
+                  onChange={(e) => setPdfUrl(e.target.value)}
+                  placeholder="https://example.com/tasksheet.pdf"
+                  className="text-sm"
+                  data-testid="input-speaking-pdf-url"
+                />
+              </div>
+              {pdfUrl && (
+                <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 underline">
+                  📄 Preview PDF
+                </a>
+              )}
             </div>
           </div>
 

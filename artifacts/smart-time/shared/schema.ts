@@ -23,6 +23,8 @@ export const speakingTests = pgTable("speaking_tests", {
   description: text("description").notNull(),
   questions: text("questions").array().notNull(),
   questionImages: jsonb("question_images").$type<SpeakingQuestionImage[]>().default([]),
+  imageUrl: text("image_url"),
+  pdfUrl: text("pdf_url"),
   tips: text("tips").array().notNull(),
   difficulty: text("difficulty").notNull(),
   duration: integer("duration").notNull(),

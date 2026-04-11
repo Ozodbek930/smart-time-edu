@@ -1854,6 +1854,41 @@ function SpeakingAIOSection({ parts }: { parts: SpeakingTest[] }) {
           <div className="text-xs text-gray-400">{phase.partIdx + 1}/{parts.length}</div>
         </div>
 
+        {/* Test-level image (cue card) */}
+        {(pt as any).imageUrl && (
+          <div className="rounded-xl border-2 border-rose-100 bg-white overflow-hidden">
+            <div className="px-4 py-2 bg-rose-50 border-b border-rose-100 flex items-center gap-2">
+              <span className="text-xs font-semibold text-rose-700 uppercase tracking-wide">Cue Card / Image</span>
+            </div>
+            <div className="p-4">
+              <img
+                src={(pt as any).imageUrl}
+                alt="Test card"
+                className="rounded-lg border max-h-72 object-contain w-full bg-gray-50"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Test-level PDF */}
+        {(pt as any).pdfUrl && (
+          <div className="rounded-xl border-2 border-amber-100 bg-amber-50/40 p-3 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center text-amber-700 text-lg shrink-0">📄</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-amber-800">Task Sheet / PDF</p>
+              <p className="text-[11px] text-amber-600 truncate">{(pt as any).pdfUrl}</p>
+            </div>
+            <a
+              href={(pt as any).pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              Open PDF
+            </a>
+          </div>
+        )}
+
         {/* Questions */}
         <div className="space-y-3">
           {pt.questions.map((q, qi) => {
