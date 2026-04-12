@@ -1996,7 +1996,7 @@ export function FullMockAllInOneExam() {
   // Writing responses keyed by section idx
   const [writingResponses, setWritingResponses] = useState<Record<number, string>>({});
   const [submitted, setSubmitted] = useState(false);
-  const [fontSize, setFontSize] = useState(14);
+  const [zoom, setZoom] = useState(1.0);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
@@ -2182,8 +2182,17 @@ export function FullMockAllInOneExam() {
           <div className={`font-mono text-sm font-bold px-2 py-1 rounded ${isTimerCritical ? "text-red-600 bg-red-50" : isTimerWarning ? "text-amber-600 bg-amber-50" : "text-gray-800 bg-gray-100"}`} data-testid="aio-timer">
             {timer.display}
           </div>
-          <button onClick={() => setFontSize(s => Math.max(12, s - 1))} className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 text-gray-600 font-semibold transition-colors" data-testid="button-aio-font-dec">A-</button>
-          <button onClick={() => setFontSize(s => Math.min(20, s + 1))} className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 text-gray-600 font-semibold transition-colors" data-testid="button-aio-font-inc">A+</button>
+          <button
+            onClick={() => setZoom(z => Math.max(0.7, parseFloat((z - 0.1).toFixed(1))))}
+            className="w-8 h-7 flex items-center justify-center text-sm border border-gray-300 rounded hover:bg-gray-100 text-gray-700 font-bold transition-colors"
+            data-testid="button-aio-font-dec"
+          >A-</button>
+          <span className="text-[10px] font-mono text-gray-400 select-none">{Math.round(zoom * 100)}%</span>
+          <button
+            onClick={() => setZoom(z => Math.min(1.5, parseFloat((z + 0.1).toFixed(1))))}
+            className="w-8 h-7 flex items-center justify-center text-sm border border-gray-300 rounded hover:bg-gray-100 text-gray-700 font-bold transition-colors"
+            data-testid="button-aio-font-inc"
+          >A+</button>
           {!submitted && (
             <button
               onClick={() => setShowSubmitConfirm(true)}
@@ -2206,7 +2215,7 @@ export function FullMockAllInOneExam() {
       </div>
 
       {/* ── Scrollable body ── */}
-      <div className="flex-1 overflow-y-auto bg-gray-50" style={{ fontSize: `${fontSize}px` }}>
+      <div className="flex-1 overflow-y-auto bg-gray-50" style={{ zoom }}>
         <div className="max-w-5xl mx-auto pb-4">
           {activeSections.map((sec, secIdx) => {
             const td = sec.testData as any;
