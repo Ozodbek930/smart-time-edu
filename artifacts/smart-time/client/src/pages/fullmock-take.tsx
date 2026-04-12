@@ -1997,6 +1997,8 @@ export function FullMockAllInOneExam() {
   const [writingResponses, setWritingResponses] = useState<Record<number, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [fontSize, setFontSize] = useState(14);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const totalDuration = activeSections.reduce((sum, s) => sum + ((s.testData as any)?.duration || 0), 0);
 
@@ -2180,11 +2182,11 @@ export function FullMockAllInOneExam() {
           <div className={`font-mono text-sm font-bold px-2 py-1 rounded ${isTimerCritical ? "text-red-600 bg-red-50" : isTimerWarning ? "text-amber-600 bg-amber-50" : "text-gray-800 bg-gray-100"}`} data-testid="aio-timer">
             {timer.display}
           </div>
-          <button onClick={() => setFontSize(s => Math.max(12, s - 1))} className="hidden sm:block px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 text-gray-600 font-semibold">A-</button>
-          <button onClick={() => setFontSize(s => Math.min(20, s + 1))} className="hidden sm:block px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 text-gray-600 font-semibold">A+</button>
+          <button onClick={() => setFontSize(s => Math.max(12, s - 1))} className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 text-gray-600 font-semibold transition-colors" data-testid="button-aio-font-dec">A-</button>
+          <button onClick={() => setFontSize(s => Math.min(20, s + 1))} className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 text-gray-600 font-semibold transition-colors" data-testid="button-aio-font-inc">A+</button>
           {!submitted && (
             <button
-              onClick={() => { if (window.confirm(`Submit all sections? ${allNavQs.length - answeredCount} questions unanswered.`)) submitMutation.mutate(); }}
+              onClick={() => setShowSubmitConfirm(true)}
               disabled={submitMutation.isPending}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs font-semibold rounded transition-colors disabled:opacity-60"
               data-testid="button-aio-submit"
@@ -2194,7 +2196,7 @@ export function FullMockAllInOneExam() {
             </button>
           )}
           <button
-            onClick={() => { if (window.confirm("Exit the exam? Your progress won't be saved.")) setLocation("/fullmock"); }}
+            onClick={() => setShowExitConfirm(true)}
             className="p-1.5 hover:bg-gray-100 rounded text-gray-500"
             data-testid="button-aio-exit"
           >
@@ -2370,7 +2372,7 @@ export function FullMockAllInOneExam() {
               </span>
               {!submitted && (
                 <button
-                  onClick={() => { if (window.confirm(`Submit all sections? ${allNavQs.length - answeredCount} questions unanswered.`)) submitMutation.mutate(); }}
+                  onClick={() => setShowSubmitConfirm(true)}
                   disabled={submitMutation.isPending}
                   className="flex items-center gap-1.5 px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs font-bold rounded transition-colors"
                   data-testid="button-aio-submit-bottom"
@@ -2400,6 +2402,83 @@ export function FullMockAllInOneExam() {
                 </button>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Submit Confirm Modal ── */}
+      {showSubmitConfirm && (
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowSubmitConfirm(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 mx-4 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center shrink-0">
+                <Send className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-base">Submit All Sections?</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone.</p>
+              </div>
+            </div>
+            <div className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-3 mb-4 space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Answered</span>
+                <span className="font-bold text-blue-600">{answeredCount} / {allNavQs.length}</span>
+              </div>
+              {allNavQs.length - answeredCount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Unanswered</span>
+                  <span className="font-bold text-rose-500">{allNavQs.length - answeredCount}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowSubmitConfirm(false)}
+                className="flex-1 px-4 py-2.5 border-2 border-gray-200 text-gray-700 font-semibold rounded-xl text-sm hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { setShowSubmitConfirm(false); submitMutation.mutate(); }}
+                disabled={submitMutation.isPending}
+                className="flex-1 px-4 py-2.5 bg-gray-900 hover:bg-gray-700 text-white font-semibold rounded-xl text-sm transition-colors disabled:opacity-60"
+                data-testid="button-aio-submit-confirm"
+              >
+                {submitMutation.isPending ? "Submitting..." : "Submit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Exit Confirm Modal ── */}
+      {showExitConfirm && (
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowExitConfirm(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 mx-4 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <X className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-base">Exit Exam?</h3>
+                <p className="text-sm text-gray-500">Your progress won't be saved.</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowExitConfirm(false)}
+                className="flex-1 px-4 py-2.5 border-2 border-gray-200 text-gray-700 font-semibold rounded-xl text-sm hover:bg-gray-50 transition-colors"
+              >
+                Stay
+              </button>
+              <button
+                onClick={() => { setShowExitConfirm(false); setLocation("/fullmock"); }}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl text-sm transition-colors"
+                data-testid="button-aio-exit-confirm"
+              >
+                Exit
+              </button>
+            </div>
           </div>
         </div>
       )}
