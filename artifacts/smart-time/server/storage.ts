@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "./db";
 import {
   users,
@@ -78,6 +78,7 @@ export interface IStorage {
 
   getTestResults(): Promise<TestResult[]>;
   getTestResultsByUser(userId: string): Promise<TestResult[]>;
+  getTestResultsByFullmock(fullmockId: string, userId: string): Promise<TestResult[]>;
   createTestResult(result: InsertTestResult): Promise<TestResult>;
 
   getVideoLessons(): Promise<VideoLesson[]>;
@@ -249,6 +250,12 @@ export class DatabaseStorage implements IStorage {
 
   async getTestResultsByUser(userId: string): Promise<TestResult[]> {
     return db.select().from(testResults).where(eq(testResults.userId, userId));
+  }
+
+  async getTestResultsByFullmock(fullmockId: string, userId: string): Promise<TestResult[]> {
+    return db.select().from(testResults).where(
+      and(eq(testResults.fullmockId, fullmockId), eq(testResults.userId, userId))
+    );
   }
 
   async createTestResult(result: InsertTestResult): Promise<TestResult> {

@@ -4,18 +4,32 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, Clock, ArrowRight, BookOpen, Headphones, Mic, PenTool } from "lucide-react";
+import { Trophy, Clock, ArrowRight, BookOpen, Headphones, Mic, PenTool, BarChart2 } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { useI18n } from "@/lib/i18n";
-import type { FullMockTest } from "@shared/schema";
+import type { FullMockTest, TestResult, User } from "@shared/schema";
 import { motion } from "framer-motion";
+import { getQueryFn } from "@/lib/queryClient";
 
 export default function FullMock() {
   const { t } = useI18n();
   const { data: tests, isLoading } = useQuery<FullMockTest[]>({
     queryKey: ["/api/fullmock-tests"],
   });
+  const { data: user } = useQuery<User | null>({
+    queryKey: ["/api/auth/me"],
+    queryFn: getQueryFn<User | null>({ on401: "returnNull" }),
+    retry: false,
+  });
+  const { data: myResults } = useQuery<TestResult[]>({
+    queryKey: ["/api/test-results/my"],
+    enabled: !!user,
+  });
+
+  const completedFullmockIds = new Set(
+    (myResults ?? []).filter(r => r.fullmockId).map(r => r.fullmockId!)
+  );
 
   const getSectionLabel = (type: string, sectionIndex?: number) => {
     if (type === "listening" && sectionIndex) return `Listening ${sectionIndex}`;
@@ -113,13 +127,21 @@ export default function FullMock() {
                         ))}
                       </div>
                     </CardContent>
-                    <CardFooter className="pt-0">
-                      <Link href={`/fullmock/${test.id}`} className="w-full">
+                    <CardFooter className="pt-0 flex gap-2">
+                      <Link href={`/fullmock/${test.id}`} className="flex-1">
                         <Button className="w-full gap-2" data-testid={`button-start-exam-${test.id}`}>
-                          Start Exam
+                          {completedFullmockIds.has(test.id) ? "Retake" : "Start Exam"}
                           <ArrowRight className="w-4 h-4" />
                         </Button>
                       </Link>
+                      {completedFullmockIds.has(test.id) && (
+                        <Link href={`/fullmock/${test.id}/results`}>
+                          <Button variant="outline" className="gap-1.5 shrink-0" data-testid={`button-view-results-${test.id}`}>
+                            <BarChart2 className="w-4 h-4" />
+                            Results
+                          </Button>
+                        </Link>
+                      )}
                     </CardFooter>
                   </Card>
                 </motion.div>

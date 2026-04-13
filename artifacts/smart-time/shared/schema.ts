@@ -85,6 +85,7 @@ export const testResults = pgTable("test_results", {
   userId: varchar("user_id").notNull(),
   testType: text("test_type").notNull(),
   testId: varchar("test_id").notNull(),
+  fullmockId: varchar("fullmock_id"),
   score: integer("score"),
   totalQuestions: integer("total_questions"),
   answers: jsonb("answers").$type<Record<string, any>>(),

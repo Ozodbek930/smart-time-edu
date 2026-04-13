@@ -254,6 +254,12 @@ export async function registerRoutes(
     res.json({ message: "User deleted" });
   });
 
+  app.get("/api/fullmock-results/:fullmockId", requireAuth, async (req, res) => {
+    const fullmockId = String(req.params.fullmockId);
+    const results = await storage.getTestResultsByFullmock(fullmockId, req.session.userId!);
+    res.json(results);
+  });
+
   app.get("/api/admin/test-results", requireAdmin, async (_req, res) => {
     const results = await storage.getTestResults();
     res.json(results);

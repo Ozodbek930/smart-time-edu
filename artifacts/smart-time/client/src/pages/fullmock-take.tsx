@@ -2080,6 +2080,7 @@ export function FullMockAllInOneExam() {
           await apiRequest("POST", "/api/test-results", {
             testType: sec.type,
             testId: sec.testId,
+            fullmockId: id,
             score: correct,
             totalQuestions: qs.length,
             answers: Object.fromEntries(Object.entries(sectionAnswers[i] || {}).map(([k, v]) => [k, v])),
@@ -2088,7 +2089,15 @@ export function FullMockAllInOneExam() {
           await apiRequest("POST", "/api/test-results", {
             testType: "writing",
             testId: sec.testId,
+            fullmockId: id,
             answers: { response: writingResponses[i] || "" },
+          });
+        } else if (sec.type === "speaking") {
+          await apiRequest("POST", "/api/test-results", {
+            testType: "speaking",
+            testId: sec.testId,
+            fullmockId: id,
+            answers: {},
           });
         }
       } catch {
@@ -2105,7 +2114,7 @@ export function FullMockAllInOneExam() {
   const submitMutation = useMutation({
     mutationFn: submitAll,
     onSuccess: () => {
-      setTimeout(() => setLocation("/fullmock"), 2000);
+      setTimeout(() => setLocation(`/fullmock/${id}/results`), 1500);
     },
   });
 
