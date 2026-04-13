@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, Headphones, BookOpen, PenTool, ChevronRight, Award, Clock, FileCheck, LogOut, Trophy } from "lucide-react";
+import { Mic, Headphones, BookOpen, PenTool, ChevronRight, Award, Clock, FileCheck, LogOut, Trophy, Home, ArrowLeft } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { motion } from "framer-motion";
@@ -137,19 +137,49 @@ export default function Dashboard() {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/60" data-testid="dashboard-header">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2" data-testid="link-dashboard-logo">
-              <motion.div
-                className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center shadow-lg shadow-primary/20"
-                whileHover={{ rotate: 10, scale: 1.1 }}
-                transition={{ type: "spring", stiffness: 300 }}
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-muted-foreground hover:text-foreground"
+                onClick={() => setLocation("/")}
+                data-testid="button-dashboard-back"
               >
-                <BookOpen className="w-4 h-4 text-primary-foreground" />
-              </motion.div>
-              <div className="flex flex-col leading-tight">
-                <span className="font-bold text-sm tracking-wide">SMART TIME</span>
-                <span className="text-[10px] text-muted-foreground font-medium tracking-widest">EDUCATION</span>
-              </div>
-            </Link>
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">{t.common.back}</span>
+              </Button>
+              <div className="h-5 w-px bg-border hidden sm:block" />
+              <Link href="/" className="flex items-center gap-2" data-testid="link-dashboard-logo">
+                <motion.div
+                  className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center shadow-lg shadow-primary/20"
+                  whileHover={{ rotate: 10, scale: 1.1 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
+                  <BookOpen className="w-4 h-4 text-primary-foreground" />
+                </motion.div>
+                <div className="flex-col leading-tight hidden sm:flex">
+                  <span className="font-bold text-sm tracking-wide">SMART TIME</span>
+                  <span className="text-[10px] text-muted-foreground font-medium tracking-widest">EDUCATION</span>
+                </div>
+              </Link>
+            </div>
+
+            <nav className="hidden md:flex items-center gap-1">
+              {[
+                { href: "/speaking", label: t.nav.speaking, icon: Mic },
+                { href: "/listening", label: t.nav.listening, icon: Headphones },
+                { href: "/reading", label: t.nav.reading, icon: BookOpen },
+                { href: "/writing", label: t.nav.writing, icon: PenTool },
+                { href: "/fullmock", label: "Mock", icon: Trophy },
+              ].map(({ href, label, icon: Icon }) => (
+                <Link key={href} href={href}>
+                  <Button variant="ghost" size="sm" className="gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground h-8 px-3">
+                    <Icon className="w-3.5 h-3.5" />
+                    {label}
+                  </Button>
+                </Link>
+              ))}
+            </nav>
 
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
