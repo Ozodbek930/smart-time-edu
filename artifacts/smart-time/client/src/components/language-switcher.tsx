@@ -11,6 +11,8 @@ import {
 const languages: { code: Language; label: string; flag: string }[] = [
   { code: "en", label: "English", flag: "EN" },
   { code: "ru", label: "Русский", flag: "RU" },
+  { code: "ja", label: "日本語", flag: "JA" },
+  { code: "de", label: "Deutsch", flag: "DE" },
   { code: "uz", label: "O'zbek", flag: "UZ" },
 ];
 
