@@ -1762,17 +1762,17 @@ function UsersTab() {
     mutationFn: (id: string) => apiRequest("DELETE", `/api/admin/users/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      toast({ title: "Пользователь удалён" });
+      toast({ title: "User deleted" });
     },
     onError: async (err: any) => {
-      let msg = "Ошибка при удалении";
+      let msg = "Error deleting user";
       try { const j = await err?.response?.json(); if (j?.message) msg = j.message; } catch {}
       toast({ title: msg, variant: "destructive" });
     },
   });
 
   const handleDelete = (u: Omit<User, "password">) => {
-    if (!confirm(`Удалить аккаунт "${u.username}" (${u.fullName})?`)) return;
+    if (!confirm(`Delete account "${u.username}" (${u.fullName})?`)) return;
     deleteMutation.mutate(u.id);
   };
 
@@ -1854,12 +1854,12 @@ function ResultDetail({ result, listeningTests, readingTests, writingTests, spea
       <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200/50 space-y-2">
         <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-2">
           <Mic className="w-3.5 h-3.5" />
-          {spTest ? spTest.title : "Speaking"} — завершено під час іспиту
+          {spTest ? spTest.title : "Speaking"} — completed during exam
         </p>
         {answers.recordingUrl ? (
           <audio controls src={answers.recordingUrl} className="w-full h-9 rounded" />
         ) : (
-          <p className="text-xs text-amber-600/70">Запис не збережено (виконувалось наживо)</p>
+          <p className="text-xs text-amber-600/70">Recording not saved (performed live)</p>
         )}
         {spTest && (
           <div className="text-xs text-slate-500 space-y-0.5">
@@ -1888,15 +1888,15 @@ function ResultDetail({ result, listeningTests, readingTests, writingTests, spea
         )}
         <div className="p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200/50 space-y-1">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-purple-700 dark:text-purple-400">Відповідь студента</p>
-            <span className="text-xs text-purple-400">{wordCount} слів</span>
+            <p className="text-xs font-semibold text-purple-700 dark:text-purple-400">Student's Answer</p>
+            <span className="text-xs text-purple-400">{wordCount} words</span>
           </div>
           {response ? (
             <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
               {response}
             </p>
           ) : (
-            <p className="text-xs text-slate-400 italic">Відповідь не надано</p>
+            <p className="text-xs text-slate-400 italic">No answer provided</p>
           )}
         </div>
       </div>
@@ -1930,9 +1930,9 @@ function ResultDetail({ result, listeningTests, readingTests, writingTests, spea
       <div className={`mt-2 p-3 rounded-lg border ${bgColor} space-y-2`}>
         <div className="flex items-center justify-between">
           <p className={`text-xs font-semibold ${labelColor}`}>
-            {testData?.title ?? result.testType} — Відповіді
+            {testData?.title ?? result.testType} — Answers
           </p>
-          <span className={`text-xs font-bold ${labelColor}`}>{result.score ?? 0}/{result.totalQuestions ?? allQs.length} правильно</span>
+          <span className={`text-xs font-bold ${labelColor}`}>{result.score ?? 0}/{result.totalQuestions ?? allQs.length} correct</span>
         </div>
         {allQs.length > 0 ? (
           <div className="space-y-1 max-h-72 overflow-y-auto pr-1">
@@ -1953,8 +1953,8 @@ function ResultDetail({ result, listeningTests, readingTests, writingTests, spea
                   <div className="flex-1 min-w-0">
                     <p className="text-slate-700 font-medium leading-snug">{q.question || `Q${qi + 1}`}</p>
                     <div className="flex gap-3 mt-0.5 flex-wrap">
-                      <span className={`font-medium ${correct ? "text-green-700" : "text-red-600"}`}>Відповідь: {userLabel}</span>
-                      {!correct && <span className="text-green-700 font-medium">Правильно: {correctLabel}</span>}
+                      <span className={`font-medium ${correct ? "text-green-700" : "text-red-600"}`}>Answer: {userLabel}</span>
+                      {!correct && <span className="text-green-700 font-medium">Correct: {correctLabel}</span>}
                     </div>
                   </div>
                 </div>
@@ -1962,7 +1962,7 @@ function ResultDetail({ result, listeningTests, readingTests, writingTests, spea
             })}
           </div>
         ) : (
-          <p className="text-xs text-slate-400">Питання не знайдено</p>
+          <p className="text-xs text-slate-400">No questions found</p>
         )}
       </div>
     );
@@ -2097,7 +2097,7 @@ function TestResultsTab() {
             </div>
           ))}
           {!filtered.length && (
-            <div className="text-center text-muted-foreground py-8 rounded-lg border">Результати відсутні</div>
+            <div className="text-center text-muted-foreground py-8 rounded-lg border">No results found</div>
           )}
         </div>
       </CardContent>
