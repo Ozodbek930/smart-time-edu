@@ -1838,45 +1838,132 @@ function UsersTab() {
   );
 }
 
-function ResultDetail({ result }: { result: TestResult }) {
-  const answers = result.answers as Record<string, any>;
+function ResultDetail({ result, listeningTests, readingTests, writingTests, speakingTests: spTests }: {
+  result: TestResult;
+  listeningTests?: ListeningTest[];
+  readingTests?: ReadingTest[];
+  writingTests?: WritingTest[];
+  speakingTests?: SpeakingTest[];
+}) {
+  const answers = (result.answers as Record<string, any>) ?? {};
 
-  if (result.testType === "speaking" && answers?.recordingUrl) {
+  // ── Speaking ──────────────────────────────────────────────────────────────
+  if (result.testType === "speaking") {
+    const spTest = spTests?.find(t => t.id === result.testId);
     return (
-      <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200/50 space-y-2">
-        <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1">
-          <Mic2Icon className="w-3.5 h-3.5" /> Запись студента
+      <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200/50 space-y-2">
+        <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-2">
+          <Mic className="w-3.5 h-3.5" />
+          {spTest ? spTest.title : "Speaking"} — завершено під час іспиту
         </p>
-        <audio controls src={answers.recordingUrl} className="w-full h-9 rounded" />
+        {answers.recordingUrl ? (
+          <audio controls src={answers.recordingUrl} className="w-full h-9 rounded" />
+        ) : (
+          <p className="text-xs text-amber-600/70">Запис не збережено (виконувалось наживо)</p>
+        )}
+        {spTest && (
+          <div className="text-xs text-slate-500 space-y-0.5">
+            {(spTest.questions ?? []).map((q, i) => (
+              <p key={i}>• Part {i + 1}: {q}</p>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
 
-  if (result.testType === "writing" && answers?.response) {
+  // ── Writing ───────────────────────────────────────────────────────────────
+  if (result.testType === "writing") {
+    const wTest = writingTests?.find(t => t.id === result.testId);
+    const response = answers.response ?? "";
+    const wordCount = response.trim() ? response.trim().split(/\s+/).length : 0;
     return (
-      <div className="p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200/50 space-y-1">
-        <p className="text-xs font-semibold text-purple-700 dark:text-purple-400">Эссе студента</p>
-        <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto">
-          {answers.response}
-        </p>
-      </div>
-    );
-  }
-
-  if ((result.testType === "reading" || result.testType === "listening") && result.score != null) {
-    const entries = Object.entries(answers).filter(([k]) => !isNaN(Number(k)));
-    if (entries.length === 0) return null;
-    return (
-      <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200/50 space-y-1">
-        <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">Ответы студента</p>
-        <div className="flex flex-wrap gap-1">
-          {entries.map(([qId]) => (
-            <span key={qId} className="text-xs font-mono bg-white dark:bg-slate-800 border rounded px-1.5 py-0.5">
-              Q{qId}
-            </span>
-          ))}
+      <div className="mt-2 space-y-2">
+        {wTest && (
+          <div className="p-2 bg-slate-50 rounded border text-xs text-slate-600 space-y-1">
+            {(wTest as any).tasks?.map((task: any, i: number) => (
+              <p key={i}><span className="font-semibold">Task {i + 1}:</span> {task.title ?? task.task}</p>
+            ))}
+          </div>
+        )}
+        <div className="p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200/50 space-y-1">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-purple-700 dark:text-purple-400">Відповідь студента</p>
+            <span className="text-xs text-purple-400">{wordCount} слів</span>
+          </div>
+          {response ? (
+            <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
+              {response}
+            </p>
+          ) : (
+            <p className="text-xs text-slate-400 italic">Відповідь не надано</p>
+          )}
         </div>
-        <p className="text-xs text-slate-500">Итог: {result.score}/{result.totalQuestions}</p>
+      </div>
+    );
+  }
+
+  // ── Listening / Reading ───────────────────────────────────────────────────
+  if (result.testType === "listening" || result.testType === "reading") {
+    const testList = result.testType === "listening" ? listeningTests : readingTests;
+    const testData = (testList as any[])?.find((t: any) => t.id === result.testId) as any;
+
+    const allSections: any[] = testData?.testSections?.length
+      ? testData.testSections
+      : [{ questions: testData?.questions ?? [] }];
+
+    const allQs = allSections.flatMap(s =>
+      (s.questions ?? []).flatMap((q: any) => Array.isArray(q) ? q : [q])
+    ).filter((q: any) => q.type !== "text");
+
+    const isCorrect = (q: any) => {
+      const ua = answers[q.id];
+      if (q.correctAnswer !== undefined) return parseInt(String(ua)) === q.correctAnswer;
+      if (q.correctText) return String(ua ?? "").trim().toLowerCase() === q.correctText.toLowerCase();
+      return false;
+    };
+
+    const bgColor = result.testType === "listening" ? "bg-green-50 border-green-200" : "bg-blue-50 border-blue-200";
+    const labelColor = result.testType === "listening" ? "text-green-700" : "text-blue-700";
+
+    return (
+      <div className={`mt-2 p-3 rounded-lg border ${bgColor} space-y-2`}>
+        <div className="flex items-center justify-between">
+          <p className={`text-xs font-semibold ${labelColor}`}>
+            {testData?.title ?? result.testType} — Відповіді
+          </p>
+          <span className={`text-xs font-bold ${labelColor}`}>{result.score ?? 0}/{result.totalQuestions ?? allQs.length} правильно</span>
+        </div>
+        {allQs.length > 0 ? (
+          <div className="space-y-1 max-h-72 overflow-y-auto pr-1">
+            {allQs.map((q: any, qi: number) => {
+              const ua = answers[q.id];
+              const correct = isCorrect(q);
+              const userLabel = q.options && !isNaN(parseInt(String(ua)))
+                ? (q.options[parseInt(String(ua))] ?? `#${ua}`)
+                : (ua !== undefined ? String(ua) : "—");
+              const correctLabel = q.options && q.correctAnswer !== undefined
+                ? q.options[q.correctAnswer]
+                : q.correctText ?? "—";
+              return (
+                <div key={q.id ?? qi} className={`flex items-start gap-2 p-2 rounded text-xs ${correct ? "bg-green-100/70" : "bg-red-100/70"}`}>
+                  <span className={`shrink-0 font-bold mt-0.5 ${correct ? "text-green-600" : "text-red-600"}`}>
+                    {correct ? "✓" : "✗"}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-700 font-medium leading-snug">{q.question || `Q${qi + 1}`}</p>
+                    <div className="flex gap-3 mt-0.5 flex-wrap">
+                      <span className={`font-medium ${correct ? "text-green-700" : "text-red-600"}`}>Відповідь: {userLabel}</span>
+                      {!correct && <span className="text-green-700 font-medium">Правильно: {correctLabel}</span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-xs text-slate-400">Питання не знайдено</p>
+        )}
       </div>
     );
   }
@@ -1884,57 +1971,77 @@ function ResultDetail({ result }: { result: TestResult }) {
   return null;
 }
 
-const Mic2Icon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-    <line x1="12" x2="12" y1="19" y2="22"/>
-  </svg>
-);
-
 function TestResultsTab() {
   const { data: results, isLoading } = useQuery<TestResult[]>({
     queryKey: ["/api/admin/test-results"],
     queryFn: getQueryFn<TestResult[]>({ on401: "throw" }),
   });
-
   const { data: users } = useQuery<Omit<User, "password">[]>({
     queryKey: ["/api/admin/users"],
     queryFn: getQueryFn<Omit<User, "password">[]>({ on401: "throw" }),
   });
+  const { data: listeningTests } = useQuery<ListeningTest[]>({ queryKey: ["/api/listening-tests"] });
+  const { data: readingTests } = useQuery<ReadingTest[]>({ queryKey: ["/api/reading-tests"] });
+  const { data: writingTests } = useQuery<WritingTest[]>({ queryKey: ["/api/writing-tests"] });
+  const { data: spTests } = useQuery<SpeakingTest[]>({ queryKey: ["/api/speaking-tests"] });
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterUser, setFilterUser] = useState<string>("all");
 
   const getUserName = (userId: string) => {
-    const user = users?.find(u => u.id === userId);
-    return user?.fullName || user?.username || userId.slice(0, 8) + "...";
+    const u = users?.find(u => u.id === userId);
+    return u?.fullName || u?.username || userId.slice(0, 8) + "…";
   };
 
   const typeColor: Record<string, string> = {
-    speaking: "bg-amber-100 text-amber-800 border-amber-300",
-    writing: "bg-purple-100 text-purple-800 border-purple-300",
-    reading: "bg-blue-100 text-blue-800 border-blue-300",
+    speaking:  "bg-amber-100 text-amber-800 border-amber-300",
+    writing:   "bg-purple-100 text-purple-800 border-purple-300",
+    reading:   "bg-blue-100 text-blue-800 border-blue-300",
     listening: "bg-green-100 text-green-800 border-green-300",
   };
 
-  if (isLoading) {
-    return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
-  }
+  const filtered = (results ?? []).filter(r => {
+    if (filterType !== "all" && r.testType !== filterType) return false;
+    if (filterUser !== "all" && r.userId !== filterUser) return false;
+    return true;
+  }).sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+
+  const uniqueUsers = [...new Map((results ?? []).map(r => [r.userId, r])).values()];
+
+  if (isLoading) return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
 
   return (
     <Card className="border-amber-200/50 dark:border-slate-800">
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><BarChart3 className="w-5 h-5 text-amber-600" /> Test Results</CardTitle>
-        <CardDescription>{results?.length || 0} submissions — нажмите на строку чтобы увидеть детали</CardDescription>
+        <CardDescription>{filtered.length} / {results?.length || 0} submissions</CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Filters */}
+        <div className="flex gap-2 mb-4 flex-wrap">
+          {["all", "listening", "reading", "writing", "speaking"].map(t => (
+            <button
+              key={t}
+              onClick={() => setFilterType(t)}
+              className={`text-xs px-3 py-1 rounded-full border font-medium capitalize transition-colors ${filterType === t ? "bg-slate-800 text-white border-slate-800" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+            >{t === "all" ? "All Types" : t}</button>
+          ))}
+          <select
+            value={filterUser}
+            onChange={e => setFilterUser(e.target.value)}
+            className="ml-auto text-xs border rounded-lg px-2 py-1 text-slate-600 bg-white"
+          >
+            <option value="all">All Students</option>
+            {uniqueUsers.map(r => (
+              <option key={r.userId} value={r.userId}>{getUserName(r.userId)}</option>
+            ))}
+          </select>
+        </div>
+
         <div className="space-y-2">
-          {results?.map((r) => (
-            <div
-              key={r.id}
-              className="rounded-lg border bg-white dark:bg-slate-800/30 overflow-hidden"
-              data-testid={`row-result-${r.id}`}
-            >
+          {filtered.map((r) => (
+            <div key={r.id} className="rounded-lg border bg-white dark:bg-slate-800/30 overflow-hidden" data-testid={`row-result-${r.id}`}>
               <button
                 className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                 onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
@@ -1943,19 +2050,24 @@ function TestResultsTab() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-sm truncate">{getUserName(r.userId)}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded border font-medium capitalize ${typeColor[r.testType] || "bg-slate-100 text-slate-700"}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded border font-medium capitalize ${typeColor[r.testType] ?? "bg-slate-100 text-slate-700"}`}>
                       {r.testType}
                     </span>
+                    {r.fullmockId && (
+                      <span className="text-xs px-2 py-0.5 rounded border font-medium bg-slate-100 text-slate-600 border-slate-200">
+                        Full Mock
+                      </span>
+                    )}
                     {r.score != null && r.totalQuestions ? (
-                      <span className="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded">
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded border ${r.score / r.totalQuestions >= 0.7 ? "bg-green-50 text-green-700 border-green-200" : r.score / r.totalQuestions >= 0.5 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-red-50 text-red-700 border-red-200"}`}>
                         {r.score}/{r.totalQuestions}
                       </span>
                     ) : (
-                      <span className="text-xs text-muted-foreground">Submitted</span>
+                      <span className="text-xs text-muted-foreground italic">Submitted</span>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {r.completedAt ? new Date(r.completedAt).toLocaleString() : "-"}
+                    {r.completedAt ? new Date(r.completedAt).toLocaleString("uk-UA") : "—"}
                   </p>
                 </div>
                 <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${expandedId === r.id ? "rotate-180" : ""}`} />
@@ -1967,19 +2079,25 @@ function TestResultsTab() {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.25 }}
+                    transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
-                    <div className="px-4 pb-3 border-t">
-                      <ResultDetail result={r} />
+                    <div className="px-4 pb-4 border-t pt-1">
+                      <ResultDetail
+                        result={r}
+                        listeningTests={listeningTests}
+                        readingTests={readingTests}
+                        writingTests={writingTests}
+                        speakingTests={spTests}
+                      />
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
           ))}
-          {!results?.length && (
-            <div className="text-center text-muted-foreground py-8 rounded-lg border">No test results yet</div>
+          {!filtered.length && (
+            <div className="text-center text-muted-foreground py-8 rounded-lg border">Результати відсутні</div>
           )}
         </div>
       </CardContent>
