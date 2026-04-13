@@ -48,6 +48,7 @@ const translations = {
       successRate: "Success Rate",
     },
     dashboardPage: {
+      myDashboard: "My Dashboard",
       welcome: "Welcome back",
       subtitle: "Choose a module to continue your IELTS preparation",
       progress: "Your Progress",
@@ -268,6 +269,7 @@ const translations = {
       successRate: "Успешность",
     },
     dashboardPage: {
+      myDashboard: "Мой кабинет",
       welcome: "С возвращением",
       subtitle: "Выберите модуль для продолжения подготовки к IELTS",
       progress: "Ваш прогресс",
@@ -488,6 +490,7 @@ const translations = {
       successRate: "合格率",
     },
     dashboardPage: {
+      myDashboard: "マイダッシュボード",
       welcome: "おかえりなさい",
       subtitle: "IELTS対策を続けるモジュールを選んでください",
       progress: "あなたの進捗",
@@ -708,6 +711,7 @@ const translations = {
       successRate: "Erfolgsquote",
     },
     dashboardPage: {
+      myDashboard: "Mein Dashboard",
       welcome: "Willkommen zurück",
       subtitle: "Wählen Sie ein Modul, um Ihre IELTS-Vorbereitung fortzusetzen",
       progress: "Ihr Fortschritt",
@@ -928,6 +932,7 @@ const translations = {
       successRate: "Muvaffaqiyat",
     },
     dashboardPage: {
+      myDashboard: "Mening kabinetim",
       welcome: "Xush kelibsiz",
       subtitle: "IELTS tayyorgarligingizni davom ettirish uchun modulni tanlang",
       progress: "Sizning taraqqiyotingiz",

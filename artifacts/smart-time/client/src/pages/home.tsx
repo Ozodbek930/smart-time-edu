@@ -9,6 +9,9 @@ import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { useI18n } from "@/lib/i18n";
 import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { getQueryFn } from "@/lib/queryClient";
+import type { User } from "@shared/schema";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
@@ -70,6 +73,10 @@ const modules = [
 
 export default function Home() {
   const { t } = useI18n();
+  const { data: user } = useQuery<User | null>({
+    queryKey: ["/api/user"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+  });
 
   const stats = [
     { value: "50+", label: t.stats.practiceTests, icon: BookOpen },
@@ -151,18 +158,30 @@ export default function Home() {
               variants={fadeInUp}
               transition={{ duration: 0.6 }}
             >
-              <Link href="/register">
-                <Button size="lg" className="gap-2 text-base px-8 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all" data-testid="button-get-started">
-                  <GraduationCap className="w-5 h-5" />
-                  {t.auth.signUp}
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
-              <Link href="/login">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-border/80 hover:bg-muted/60">
-                  {t.nav.login}
-                </Button>
-              </Link>
+              {user ? (
+                <Link href="/dashboard">
+                  <Button size="lg" className="gap-2 text-base px-8 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all" data-testid="button-go-dashboard">
+                    <GraduationCap className="w-5 h-5" />
+                    {t.dashboardPage.myDashboard}
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </Link>
+              ) : (
+                <>
+                  <Link href="/register">
+                    <Button size="lg" className="gap-2 text-base px-8 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all" data-testid="button-get-started">
+                      <GraduationCap className="w-5 h-5" />
+                      {t.auth.signUp}
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/login">
+                    <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-border/80 hover:bg-muted/60">
+                      {t.nav.login}
+                    </Button>
+                  </Link>
+                </>
+              )}
             </motion.div>
           </motion.div>
 
