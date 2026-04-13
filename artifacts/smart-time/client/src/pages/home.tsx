@@ -34,10 +34,10 @@ const modules = [
     icon: Headphones,
     label: "Listening",
     href: "/listening",
-    color: "from-blue-500 to-indigo-600",
-    bg: "bg-blue-500/10 dark:bg-blue-500/15",
-    ring: "ring-blue-500/20",
-    text: "text-blue-600 dark:text-blue-400",
+    color: "from-amber-400 to-yellow-500",
+    bg: "bg-amber-400/10 dark:bg-amber-400/15",
+    ring: "ring-amber-400/20",
+    text: "text-amber-600 dark:text-amber-400",
   },
   {
     icon: BookOpen,
@@ -52,10 +52,10 @@ const modules = [
     icon: PenTool,
     label: "Writing",
     href: "/writing",
-    color: "from-violet-500 to-purple-600",
-    bg: "bg-violet-500/10 dark:bg-violet-500/15",
-    ring: "ring-violet-500/20",
-    text: "text-violet-600 dark:text-violet-400",
+    color: "from-orange-500 to-amber-600",
+    bg: "bg-orange-500/10 dark:bg-orange-500/15",
+    ring: "ring-orange-500/20",
+    text: "text-orange-600 dark:text-orange-400",
   },
   {
     icon: Trophy,
@@ -250,11 +250,11 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
               { icon: Mic, label: "Speaking", desc: t.skills.speakingModuleDesc, color: "from-rose-500 to-pink-600", bg: "bg-rose-500/5", border: "border-rose-500/15", href: "/speaking" },
-              { icon: Headphones, label: "Listening", desc: t.skills.listeningModuleDesc, color: "from-blue-500 to-indigo-600", bg: "bg-blue-500/5", border: "border-blue-500/15", href: "/listening" },
+              { icon: Headphones, label: "Listening", desc: t.skills.listeningModuleDesc, color: "from-amber-400 to-yellow-500", bg: "bg-amber-400/5", border: "border-amber-400/15", href: "/listening" },
               { icon: BookOpen, label: "Reading", desc: t.skills.readingModuleDesc, color: "from-emerald-500 to-teal-600", bg: "bg-emerald-500/5", border: "border-emerald-500/15", href: "/reading" },
-              { icon: PenTool, label: "Writing", desc: t.skills.writingModuleDesc, color: "from-violet-500 to-purple-600", bg: "bg-violet-500/5", border: "border-violet-500/15", href: "/writing" },
+              { icon: PenTool, label: "Writing", desc: t.skills.writingModuleDesc, color: "from-orange-500 to-amber-600", bg: "bg-orange-500/5", border: "border-orange-500/15", href: "/writing" },
               { icon: Trophy, label: t.skills.fullmockTitle, desc: t.skills.fullmockModuleDesc, color: "from-amber-500 to-orange-600", bg: "bg-amber-500/5", border: "border-amber-500/15", href: "/fullmock" },
-              { icon: Sparkles, label: t.skills.aiFeedbackLabel, desc: t.skills.aiFeedbackModuleDesc, color: "from-fuchsia-500 to-pink-600", bg: "bg-fuchsia-500/5", border: "border-fuchsia-500/15", href: "/writing" },
+              { icon: Sparkles, label: t.skills.aiFeedbackLabel, desc: t.skills.aiFeedbackModuleDesc, color: "from-yellow-500 to-amber-500", bg: "bg-yellow-500/5", border: "border-yellow-500/15", href: "/writing" },
             ].map((item, i) => (
               <motion.div
                 key={item.label}
