@@ -1990,17 +1990,13 @@ function TestResultsTab() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>("all");
   const [filterUser, setFilterUser] = useState<string>("all");
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-
   const deleteMutation = useMutation({
     mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/test-results/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/test-results"] });
-      setDeletingId(null);
       toast({ title: "Result deleted" });
     },
     onError: () => {
-      setDeletingId(null);
       toast({ title: "Failed to delete", variant: "destructive" });
     },
   });
@@ -2088,15 +2084,10 @@ function TestResultsTab() {
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <button
-                    onClick={() => {
-                      if (deletingId === r.id) {
-                        deleteMutation.mutate(r.id);
-                      } else {
-                        setDeletingId(r.id);
-                      }
-                    }}
-                    className={`p-1.5 rounded-md transition-colors ${deletingId === r.id ? "bg-red-100 text-red-600 hover:bg-red-200" : "text-muted-foreground hover:text-red-500 hover:bg-red-50"}`}
-                    title={deletingId === r.id ? "Click again to confirm delete" : "Delete result"}
+                    onClick={() => deleteMutation.mutate(r.id)}
+                    disabled={deleteMutation.isPending}
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
+                    title="Delete result"
                     data-testid={`button-delete-result-${r.id}`}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
