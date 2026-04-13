@@ -238,6 +238,13 @@ export async function registerRoutes(
     res.json(results);
   });
 
+  app.delete("/api/admin/test-results/:id", requireAdmin, async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+    await storage.deleteTestResult(id);
+    res.json({ success: true });
+  });
+
   app.get("/api/admin/users", requireAdmin, async (_req, res) => {
     const allUsers = await storage.getAllUsers();
     const safeUsers = allUsers.map(({ password, ...u }) => u);

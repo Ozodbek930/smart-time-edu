@@ -1972,6 +1972,8 @@ function ResultDetail({ result, listeningTests, readingTests, writingTests, spea
 }
 
 function TestResultsTab() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { data: results, isLoading } = useQuery<TestResult[]>({
     queryKey: ["/api/admin/test-results"],
     queryFn: getQueryFn<TestResult[]>({ on401: "throw" }),
@@ -1988,6 +1990,20 @@ function TestResultsTab() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>("all");
   const [filterUser, setFilterUser] = useState<string>("all");
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/test-results/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/test-results"] });
+      setDeletingId(null);
+      toast({ title: "Result deleted" });
+    },
+    onError: () => {
+      setDeletingId(null);
+      toast({ title: "Failed to delete", variant: "destructive" });
+    },
+  });
 
   const getUserName = (userId: string) => {
     const u = users?.find(u => u.id === userId);
@@ -2042,12 +2058,12 @@ function TestResultsTab() {
         <div className="space-y-2">
           {filtered.map((r) => (
             <div key={r.id} className="rounded-lg border bg-white dark:bg-slate-800/30 overflow-hidden" data-testid={`row-result-${r.id}`}>
-              <button
-                className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                data-testid={`button-expand-result-${r.id}`}
-              >
-                <div className="flex-1 min-w-0">
+              <div className="flex items-center px-4 py-3 gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                <div
+                  className="flex-1 min-w-0 cursor-pointer"
+                  onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                  data-testid={`button-expand-result-${r.id}`}
+                >
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-sm truncate">{getUserName(r.userId)}</span>
                     <span className={`text-xs px-2 py-0.5 rounded border font-medium capitalize ${typeColor[r.testType] ?? "bg-slate-100 text-slate-700"}`}>
@@ -2070,8 +2086,29 @@ function TestResultsTab() {
                     {r.completedAt ? new Date(r.completedAt).toLocaleString("uk-UA") : "—"}
                   </p>
                 </div>
-                <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${expandedId === r.id ? "rotate-180" : ""}`} />
-              </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => {
+                      if (deletingId === r.id) {
+                        deleteMutation.mutate(r.id);
+                      } else {
+                        setDeletingId(r.id);
+                      }
+                    }}
+                    className={`p-1.5 rounded-md transition-colors ${deletingId === r.id ? "bg-red-100 text-red-600 hover:bg-red-200" : "text-muted-foreground hover:text-red-500 hover:bg-red-50"}`}
+                    title={deletingId === r.id ? "Click again to confirm delete" : "Delete result"}
+                    data-testid={`button-delete-result-${r.id}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                  <div
+                    className="cursor-pointer p-1"
+                    onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                  >
+                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expandedId === r.id ? "rotate-180" : ""}`} />
+                  </div>
+                </div>
+              </div>
 
               <AnimatePresence>
                 {expandedId === r.id && (
