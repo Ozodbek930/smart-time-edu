@@ -1725,18 +1725,20 @@ function SpeakingCountdown({ seconds, label, onDone, color = "blue" }: {
   );
 }
 
-function SpeakingAIOSection({ parts }: { parts: SpeakingTest[] }) {
+function SpeakingAIOSection({ parts, onPartRecorded }: {
+  parts: SpeakingTest[];
+  onPartRecorded?: (partIdx: number, serverUrl: string) => void;
+}) {
   const [phase, setPhase] = useState<SpeakingPhase>({ type: "start" });
-  const { isRecording, audioUrl, duration: recDuration, error: recError, startRecording, stopRecording, reset: resetRec } = useAudioRecorder();
-  const [recordings, setRecordings] = useState<Record<number, string | null>>({});
+  const { isRecording, audioBlob, audioUrl, duration: recDuration, error: recError, startRecording, stopRecording, reset: resetRec } = useAudioRecorder();
+  const [recordings, setRecordings] = useState<Record<number, string>>({});
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   if (parts.length === 0) return null;
 
   const firstPart = parts[0];
   const warmupSec = (firstPart.warmupDuration ?? 60);
-  const currentPart = phase.type === "part_active" || phase.type === "part_prep"
-    ? parts[phase.partIdx]
-    : null;
   const isLastPart = (phase.type === "part_active" || phase.type === "part_prep") && phase.partIdx >= parts.length - 1;
 
   const goToPartActive = (partIdx: number) => setPhase({ type: "part_active", partIdx });
@@ -1747,12 +1749,25 @@ function SpeakingAIOSection({ parts }: { parts: SpeakingTest[] }) {
     else { goToPartPrep(phase.partIdx); }
   };
 
-  // Save recording when done
+  // Upload blob to server as soon as recording stops
   useEffect(() => {
-    if (audioUrl && (phase.type === "part_active")) {
-      setRecordings(prev => ({ ...prev, [phase.partIdx]: audioUrl }));
-    }
-  }, [audioUrl]);
+    if (!audioBlob || phase.type !== "part_active") return;
+    const partIdx = phase.partIdx;
+    const partId = parts[partIdx]?.id ?? `part-${partIdx}`;
+    setUploading(true);
+    setUploadError(null);
+    const formData = new FormData();
+    const ext = audioBlob.type.includes("webm") ? "webm" : "ogg";
+    formData.append("recording", audioBlob, `speaking-aio-${partId}.${ext}`);
+    fetch("/api/speaking/upload", { method: "POST", body: formData, credentials: "include" })
+      .then(r => r.ok ? r.json() : Promise.reject("Upload failed"))
+      .then(({ url }: { url: string }) => {
+        setRecordings(prev => ({ ...prev, [partIdx]: url }));
+        onPartRecorded?.(partIdx, url);
+      })
+      .catch(() => setUploadError("Не удалось загрузить запись. Попробуйте ещё раз."))
+      .finally(() => setUploading(false));
+  }, [audioBlob]);
 
   if (phase.type === "start") {
     return (
@@ -1917,6 +1932,7 @@ function SpeakingAIOSection({ parts }: { parts: SpeakingTest[] }) {
             <span className="text-sm font-semibold text-rose-700">Record Your Answer</span>
           </div>
           {recError && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{recError}</div>}
+          {uploadError && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">⚠ {uploadError}</div>}
           {!audioUrl ? (
             <div className="flex items-center gap-3 flex-wrap">
               {!isRecording ? (
@@ -1936,7 +1952,17 @@ function SpeakingAIOSection({ parts }: { parts: SpeakingTest[] }) {
           ) : (
             <div className="space-y-2">
               <audio controls src={audioUrl} className="w-full h-10 rounded-lg" />
-              <button onClick={resetRec} className="text-xs text-gray-500 hover:text-gray-700 underline" data-testid="aio-speaking-re-record">Re-record</button>
+              {uploading && (
+                <div className="flex items-center gap-2 text-xs text-rose-600">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Сохранение записи...
+                </div>
+              )}
+              {phase.type === "part_active" && recordings[phase.partIdx] && !uploading && (
+                <div className="flex items-center gap-1.5 text-xs text-green-600">
+                  <CheckCircle className="w-3 h-3" /> Запись сохранена
+                </div>
+              )}
+              <button onClick={() => { resetRec(); setUploadError(null); }} className="text-xs text-gray-500 hover:text-gray-700 underline" data-testid="aio-speaking-re-record">Перезаписать</button>
             </div>
           )}
         </div>
@@ -1995,6 +2021,11 @@ export function FullMockAllInOneExam() {
   const [sectionAnswers, setSectionAnswers] = useState<Record<number, Record<number, number | string>>>({});
   // Writing responses keyed by section idx
   const [writingResponses, setWritingResponses] = useState<Record<number, string>>({});
+  // Speaking recordings: partIdx → server URL
+  const [speakingRecordings, setSpeakingRecordings] = useState<Record<number, string>>({});
+  const handleSpeakingPartRecorded = (partIdx: number, serverUrl: string) => {
+    setSpeakingRecordings(prev => ({ ...prev, [partIdx]: serverUrl }));
+  };
   const [submitted, setSubmitted] = useState(false);
   const [zoom, setZoom] = useState(1.0);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
@@ -2093,11 +2124,14 @@ export function FullMockAllInOneExam() {
             answers: { response: writingResponses[i] || "" },
           });
         } else if (sec.type === "speaking") {
+          // Find which speaking part index this section corresponds to
+          const speakingSecIdx = activeSections.filter(s => s.type === "speaking").indexOf(sec);
+          const recordingUrl = speakingRecordings[speakingSecIdx] ?? null;
           await apiRequest("POST", "/api/test-results", {
             testType: "speaking",
             testId: sec.testId,
             fullmockId: id,
-            answers: {},
+            answers: recordingUrl ? { recordingUrl } : {},
           });
         }
       } catch {
@@ -2367,7 +2401,7 @@ export function FullMockAllInOneExam() {
                   ) : sec.type === "speaking" ? (
                     /* ── SPEAKING ── rendered only for the first speaking section (all parts together) */
                     secIdx === firstSpeakingIdx ? (
-                      <SpeakingAIOSection parts={allSpeakingParts} />
+                      <SpeakingAIOSection parts={allSpeakingParts} onPartRecorded={handleSpeakingPartRecorded} />
                     ) : null
                   ) : null}
                 </div>
