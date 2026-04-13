@@ -66,7 +66,7 @@ export function Footer() {
 
         <div className="border-t border-border/60 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>&copy; {new Date().getFullYear()} SMART TIME EDUCATION. {t.footer.rights}</span>
-          <span className="opacity-60">Powered by Gemini AI</span>
+          <span className="opacity-60">Powered by Apex Enge</span>
         </div>
       </div>
     </footer>
