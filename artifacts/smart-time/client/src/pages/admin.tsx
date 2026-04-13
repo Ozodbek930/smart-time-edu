@@ -1991,9 +1991,10 @@ function TestResultsTab() {
   const [filterType, setFilterType] = useState<string>("all");
   const [filterUser, setFilterUser] = useState<string>("all");
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/test-results/${id}`),
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/admin/test-results/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/test-results"] });
+      queryClient.removeQueries({ queryKey: ["/api/admin/test-results"] });
+      queryClient.refetchQueries({ queryKey: ["/api/admin/test-results"] });
       toast({ title: "Result deleted" });
     },
     onError: () => {

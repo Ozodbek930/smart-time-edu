@@ -239,8 +239,8 @@ export async function registerRoutes(
   });
 
   app.delete("/api/admin/test-results/:id", requireAdmin, async (req, res) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+    const id = String(req.params.id);
+    if (!id) return res.status(400).json({ message: "Invalid id" });
     await storage.deleteTestResult(id);
     res.json({ success: true });
   });

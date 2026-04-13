@@ -80,7 +80,7 @@ export interface IStorage {
   getTestResultsByUser(userId: string): Promise<TestResult[]>;
   getTestResultsByFullmock(fullmockId: string, userId: string): Promise<TestResult[]>;
   createTestResult(result: InsertTestResult): Promise<TestResult>;
-  deleteTestResult(id: number): Promise<void>;
+  deleteTestResult(id: string): Promise<void>;
 
   getVideoLessons(): Promise<VideoLesson[]>;
   getActiveVideoLessons(): Promise<VideoLesson[]>;
@@ -264,7 +264,7 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async deleteTestResult(id: number): Promise<void> {
+  async deleteTestResult(id: string): Promise<void> {
     await db.delete(testResults).where(eq(testResults.id, id));
   }
 
