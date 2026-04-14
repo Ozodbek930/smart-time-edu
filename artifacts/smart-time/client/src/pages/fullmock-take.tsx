@@ -1796,17 +1796,65 @@ function SpeakingAIOSection({ parts, onPartRecorded }: {
   }
 
   if (phase.type === "warmup") {
+    const pt0 = parts[0];
+    const pt0Images = pt0.questionImages || [];
     return (
-      <div className="py-8 px-6">
-        <div className="max-w-sm mx-auto space-y-4">
-          <h3 className="text-center font-bold text-gray-900">Warm-Up / Training Time</h3>
-          <p className="text-center text-sm text-gray-500">Use this time to prepare. Part 1 will begin automatically.</p>
-          <SpeakingCountdown
-            seconds={warmupSec}
-            label="Warm-Up"
-            color="amber"
-            onDone={() => goToPartActive(0)}
-          />
+      <div className="p-6 space-y-5">
+        <div className="flex flex-col sm:flex-row gap-4 items-start">
+          {/* Timer */}
+          <div className="w-full sm:w-56 shrink-0 bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+            <h3 className="text-center font-bold text-amber-800 text-sm">Warm-Up Time</h3>
+            <p className="text-center text-xs text-amber-600">Read the questions. Part 1 starts automatically.</p>
+            <SpeakingCountdown
+              seconds={warmupSec}
+              label="Warm-Up"
+              color="amber"
+              onDone={() => goToPartActive(0)}
+            />
+            <button
+              onClick={() => goToPartActive(0)}
+              className="w-full text-xs px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors"
+            >
+              Skip →
+            </button>
+          </div>
+          {/* Questions */}
+          <div className="flex-1 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs font-bold">{pt0.part}</div>
+              <div>
+                <p className="font-bold text-gray-900 text-sm">Part {pt0.part}</p>
+                <p className="text-xs text-gray-500">{pt0.topic}</p>
+              </div>
+            </div>
+            {(pt0 as any).imageUrl && (
+              <div className="rounded-xl border-2 border-rose-100 bg-white overflow-hidden">
+                <div className="px-4 py-2 bg-rose-50 border-b border-rose-100">
+                  <span className="text-xs font-semibold text-rose-700 uppercase tracking-wide">Cue Card / Image</span>
+                </div>
+                <div className="p-4">
+                  <img src={(pt0 as any).imageUrl} alt="Test card" className="rounded-lg border max-h-72 object-contain w-full bg-gray-50" />
+                </div>
+              </div>
+            )}
+            {pt0.questions.map((q, qi) => {
+              const img = pt0Images[qi];
+              return (
+                <div key={qi} className="rounded-xl border-2 border-rose-100 bg-white overflow-hidden">
+                  <div className="flex items-start gap-3 px-4 pt-4 pb-3">
+                    <span className="shrink-0 w-7 h-7 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs font-bold shadow-sm">{qi + 1}</span>
+                    <p className="text-sm font-medium leading-relaxed pt-0.5">{q}</p>
+                  </div>
+                  {img?.url && (
+                    <div className="px-4 pb-4">
+                      <img src={img.url} alt={img.caption || `Q${qi + 1}`} className="rounded-lg border max-h-56 object-contain w-full bg-gray-50" />
+                      {img.caption && <p className="text-xs text-gray-500 mt-1 text-center italic">{img.caption}</p>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     );
@@ -1815,17 +1863,66 @@ function SpeakingAIOSection({ parts, onPartRecorded }: {
   if (phase.type === "part_prep") {
     const prepSec = (parts[phase.partIdx + 1]?.prepDuration ?? 60);
     const nextPart = parts[phase.partIdx + 1];
+    const npImages = nextPart?.questionImages || [];
     return (
-      <div className="py-8 px-6">
-        <div className="max-w-sm mx-auto space-y-4">
-          <h3 className="text-center font-bold text-gray-900">Preparation — Part {nextPart?.part || (phase.partIdx + 2)}</h3>
-          <p className="text-center text-sm text-gray-500">Get ready for the next part. It will begin automatically.</p>
-          <SpeakingCountdown
-            seconds={prepSec}
-            label={`Preparing Part ${nextPart?.part || phase.partIdx + 2}`}
-            color="blue"
-            onDone={() => goToPartActive(phase.partIdx + 1)}
-          />
+      <div className="p-6 space-y-5">
+        <div className="flex flex-col sm:flex-row gap-4 items-start">
+          {/* Timer */}
+          <div className="w-full sm:w-56 shrink-0 bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+            <h3 className="text-center font-bold text-blue-800 text-sm">Preparation Time</h3>
+            <p className="text-center text-xs text-blue-600">Read Part {nextPart?.part || phase.partIdx + 2} questions. Recording starts automatically.</p>
+            <SpeakingCountdown
+              seconds={prepSec}
+              label={`Part ${nextPart?.part || phase.partIdx + 2}`}
+              color="blue"
+              onDone={() => goToPartActive(phase.partIdx + 1)}
+            />
+            <button
+              onClick={() => goToPartActive(phase.partIdx + 1)}
+              className="w-full text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+            >
+              Skip →
+            </button>
+          </div>
+          {/* Questions */}
+          {nextPart && (
+            <div className="flex-1 space-y-3">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-7 h-7 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs font-bold">{nextPart.part}</div>
+                <div>
+                  <p className="font-bold text-gray-900 text-sm">Part {nextPart.part}</p>
+                  <p className="text-xs text-gray-500">{nextPart.topic}</p>
+                </div>
+              </div>
+              {(nextPart as any).imageUrl && (
+                <div className="rounded-xl border-2 border-rose-100 bg-white overflow-hidden">
+                  <div className="px-4 py-2 bg-rose-50 border-b border-rose-100">
+                    <span className="text-xs font-semibold text-rose-700 uppercase tracking-wide">Cue Card / Image</span>
+                  </div>
+                  <div className="p-4">
+                    <img src={(nextPart as any).imageUrl} alt="Test card" className="rounded-lg border max-h-72 object-contain w-full bg-gray-50" />
+                  </div>
+                </div>
+              )}
+              {nextPart.questions.map((q, qi) => {
+                const img = npImages[qi];
+                return (
+                  <div key={qi} className="rounded-xl border-2 border-rose-100 bg-white overflow-hidden">
+                    <div className="flex items-start gap-3 px-4 pt-4 pb-3">
+                      <span className="shrink-0 w-7 h-7 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs font-bold shadow-sm">{qi + 1}</span>
+                      <p className="text-sm font-medium leading-relaxed pt-0.5">{q}</p>
+                    </div>
+                    {img?.url && (
+                      <div className="px-4 pb-4">
+                        <img src={img.url} alt={img.caption || `Q${qi + 1}`} className="rounded-lg border max-h-56 object-contain w-full bg-gray-50" />
+                        {img.caption && <p className="text-xs text-gray-500 mt-1 text-center italic">{img.caption}</p>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     );
