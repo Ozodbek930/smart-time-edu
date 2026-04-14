@@ -1665,6 +1665,67 @@ type SpeakingPhase =
   | { type: "part_prep"; partIdx: number }
   | { type: "done" };
 
+function playWarningBeeps() {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    const ctx = new AudioContextClass();
+    const now = ctx.currentTime;
+    for (let i = 0; i < 5; i++) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = i < 4 ? 880 : 1320;
+      gain.gain.setValueAtTime(0, now + i * 0.4);
+      gain.gain.linearRampToValueAtTime(0.35, now + i * 0.4 + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.4 + 0.35);
+      osc.start(now + i * 0.4);
+      osc.stop(now + i * 0.4 + 0.4);
+    }
+  } catch (_) {}
+}
+
+function PartTimer({ seconds, onWarning, onDone }: {
+  seconds: number;
+  onWarning: () => void;
+  onDone: () => void;
+}) {
+  const [remaining, setRemaining] = useState(seconds);
+  const warned = useRef(false);
+  const done = useRef(false);
+
+  useEffect(() => {
+    if (seconds <= 0) { onDone(); return; }
+    const id = setInterval(() => {
+      setRemaining(r => {
+        const next = r - 1;
+        if (next <= 10 && !warned.current) { warned.current = true; onWarning(); }
+        if (next <= 0) {
+          clearInterval(id);
+          if (!done.current) { done.current = true; setTimeout(onDone, 400); }
+          return 0;
+        }
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const mins = Math.floor(remaining / 60);
+  const secs = remaining % 60;
+  const isWarning = remaining <= 10;
+
+  return (
+    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors ${
+      isWarning ? "bg-red-100 text-red-700 animate-pulse" : "bg-gray-100 text-gray-700"
+    }`}>
+      <Clock className="w-3.5 h-3.5 shrink-0" />
+      {mins > 0 ? `${mins}:${String(secs).padStart(2, "0")}` : `${secs}s`}
+    </div>
+  );
+}
+
 function SpeakingCountdown({ seconds, label, onDone, color = "blue" }: {
   seconds: number;
   label: string;
@@ -2024,9 +2085,19 @@ function SpeakingAIOSection({ parts, onPartRecorded }: {
 
         {/* Recording panel */}
         <div className="rounded-xl border-2 border-rose-200 bg-rose-50/40 p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <Mic className="w-4 h-4 text-rose-600" />
-            <span className="text-sm font-semibold text-rose-700">Record Your Answer</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Mic className="w-4 h-4 text-rose-600" />
+              <span className="text-sm font-semibold text-rose-700">Record Your Answer</span>
+            </div>
+            {(pt.duration ?? 0) > 0 && (
+              <PartTimer
+                key={`pt-timer-${phase.partIdx}`}
+                seconds={(pt.duration ?? 5) * 60}
+                onWarning={playWarningBeeps}
+                onDone={() => { if (isRecording) stopRecording(); setTimeout(goNext, 600); }}
+              />
+            )}
           </div>
           {recError && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{recError}</div>}
           {uploadError && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">⚠ {uploadError}</div>}
