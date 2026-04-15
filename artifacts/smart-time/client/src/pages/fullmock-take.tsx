@@ -634,12 +634,13 @@ function MapViewer({ mapUrl, mapCaption }: { mapUrl: string; mapCaption?: string
 // Listening Section Exam
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, submitRef }: {
+function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, submitRef, fullmockId }: {
   test: ListeningTest;
   onSubmitted: () => void;
   initialSeconds?: number;
   onTimerChange?: (remaining: number) => void;
   submitRef?: MutableRefObject<(() => void) | null>;
+  fullmockId?: string;
 }) {
   const { toast } = useToast();
   const [answers, setAnswers] = useState<Record<number, number | string>>({});
@@ -657,6 +658,7 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
       await apiRequest("POST", "/api/test-results", {
         testType: "listening",
         testId: test.id,
+        fullmockId: fullmockId ?? null,
         answers,
       });
     },
@@ -853,12 +855,13 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
 // Reading Section Exam — two-column layout
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, submitRef }: {
+function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, submitRef, fullmockId }: {
   test: ReadingTest;
   onSubmitted: () => void;
   initialSeconds?: number;
   onTimerChange?: (remaining: number) => void;
   submitRef?: MutableRefObject<(() => void) | null>;
+  fullmockId?: string;
 }) {
   const { toast } = useToast();
   const [answers, setAnswers] = useState<Record<number, number | string>>({});
@@ -876,6 +879,7 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, 
       await apiRequest("POST", "/api/test-results", {
         testType: "reading",
         testId: test.id,
+        fullmockId: fullmockId ?? null,
         answers,
       });
     },
@@ -1017,12 +1021,13 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, 
 // Writing Section Exam — IELTS CD split-panel (task left, editor right)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function WritingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, submitRef }: {
+function WritingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, submitRef, fullmockId }: {
   test: WritingTest;
   onSubmitted: () => void;
   initialSeconds?: number;
   onTimerChange?: (remaining: number) => void;
   submitRef?: MutableRefObject<(() => void) | null>;
+  fullmockId?: string;
 }) {
   const { toast } = useToast();
   const [response, setResponse] = useState("");
@@ -1041,6 +1046,7 @@ function WritingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, 
       await apiRequest("POST", "/api/test-results", {
         testType: "writing",
         testId: test.id,
+        fullmockId: fullmockId ?? null,
         answers: { response },
       });
     },
@@ -1195,11 +1201,12 @@ function WritingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, 
 // Speaking Section Exam
 // ─────────────────────────────────────────────────────────────────────────────
 
-function SpeakingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange }: {
+function SpeakingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, fullmockId }: {
   test: SpeakingTest;
   onSubmitted: () => void;
   initialSeconds?: number;
   onTimerChange?: (remaining: number) => void;
+  fullmockId?: string;
 }) {
   const { toast } = useToast();
   const { isRecording, audioBlob, audioUrl, duration, error, startRecording, stopRecording, reset } = useAudioRecorder();
@@ -1222,9 +1229,9 @@ function SpeakingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange 
         const uploadRes = await fetch("/api/speaking/upload", { method: "POST", body: formData, credentials: "include" });
         if (!uploadRes.ok) throw new Error("Upload failed");
         const { url } = await uploadRes.json();
-        await apiRequest("POST", "/api/test-results", { testType: "speaking", testId: test.id, answers: { recordingUrl: url } });
+        await apiRequest("POST", "/api/test-results", { testType: "speaking", testId: test.id, fullmockId: fullmockId ?? null, answers: { recordingUrl: url } });
       } else {
-        await apiRequest("POST", "/api/test-results", { testType: "speaking", testId: test.id, answers: {} });
+        await apiRequest("POST", "/api/test-results", { testType: "speaking", testId: test.id, fullmockId: fullmockId ?? null, answers: {} });
       }
     },
     onSuccess: () => { onSubmitted(); },
@@ -1654,6 +1661,7 @@ export function FullMockSection() {
                   setIsTimerWarning(s <= Math.min(300, total * 0.15) && s > 60);
                 }}
                 submitRef={sectionSubmitRef}
+                fullmockId={id}
               />
             )}
             {currentSection.type === "reading" && (
@@ -1671,6 +1679,7 @@ export function FullMockSection() {
                   setIsTimerWarning(s <= Math.min(300, total * 0.15) && s > 60);
                 }}
                 submitRef={sectionSubmitRef}
+                fullmockId={id}
               />
             )}
             {currentSection.type === "writing" && (
@@ -1688,12 +1697,14 @@ export function FullMockSection() {
                   setIsTimerWarning(s <= Math.min(300, total * 0.15) && s > 60);
                 }}
                 submitRef={sectionSubmitRef}
+                fullmockId={id}
               />
             )}
             {currentSection.type === "speaking" && (
               <SpeakingSectionExam
                 test={currentSection.testData as SpeakingTest}
                 onSubmitted={handleSectionSubmitted}
+                fullmockId={id}
               />
             )}
           </motion.div>

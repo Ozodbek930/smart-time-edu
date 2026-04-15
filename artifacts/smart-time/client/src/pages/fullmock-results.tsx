@@ -182,14 +182,22 @@ function WritingPanel({ result, testData }: { result: TestResult; testData: Test
   );
 }
 
-function SpeakingPanel() {
+function SpeakingPanel({ result }: { result: TestResult }) {
+  const recordingUrl = (result.answers as any)?.recordingUrl as string | undefined;
   return (
-    <div className="flex flex-col items-center justify-center py-10 gap-3 text-center">
+    <div className="flex flex-col items-center justify-center py-8 gap-4 text-center">
       <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center">
         <Mic className="w-8 h-8 text-rose-500" />
       </div>
       <p className="text-sm font-semibold text-gray-700">Speaking section completed</p>
-      <p className="text-xs text-gray-400 max-w-xs">Your speaking responses were recorded live during the exam. An instructor will review and provide feedback.</p>
+      {recordingUrl ? (
+        <div className="w-full max-w-sm space-y-2">
+          <p className="text-xs text-gray-500">Your recorded response:</p>
+          <audio controls src={recordingUrl} className="w-full rounded-lg" />
+        </div>
+      ) : (
+        <p className="text-xs text-gray-400 max-w-xs">No recording saved. An instructor will review and provide feedback.</p>
+      )}
     </div>
   );
 }
@@ -243,10 +251,10 @@ export default function FullMockResults() {
           <h2 className="text-xl font-bold text-gray-800">No results yet</h2>
           <p className="text-sm text-gray-500">Complete the exam first to see your results here.</p>
           <button
-            onClick={() => setLocation(`/fullmock/${id}/exam`)}
-            className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+            onClick={() => setLocation(`/fullmock/${id}/section/0`)}
+            className="px-5 py-2 bg-amber-500 text-white text-sm font-semibold rounded-lg hover:bg-amber-600 transition-colors"
           >
-            Take Exam
+            Start Exam
           </button>
         </div>
       </div>
@@ -316,13 +324,13 @@ export default function FullMockResults() {
         {/* Overall Score Card */}
         <div className="bg-white rounded-2xl border shadow-sm p-6">
           <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="flex items-center justify-center w-20 h-20 rounded-full bg-green-100 border-4 border-green-400 shrink-0">
-              <Trophy className="w-9 h-9 text-green-600" />
+            <div className="flex items-center justify-center w-20 h-20 rounded-full bg-amber-100 border-4 border-amber-400 shrink-0">
+              <Trophy className="w-9 h-9 text-amber-600" />
             </div>
             <div className="text-center sm:text-left flex-1">
               <p className="text-sm text-gray-500 font-medium">Exam Completed</p>
               <h2 className="text-2xl font-bold text-gray-900 mt-0.5">
-                Estimated Band: <span className="text-blue-600">{overallBand}</span>
+                Estimated Band: <span className="text-amber-600">{overallBand}</span>
               </h2>
               <p className="text-sm text-gray-500 mt-1">
                 Listening + Reading: {totalScore}/{totalQs} questions correct
@@ -402,7 +410,7 @@ export default function FullMockResults() {
                 No result saved for this section
               </div>
             ) : activeTabData.type === "speaking" ? (
-              <SpeakingPanel />
+              <SpeakingPanel result={activeResult} />
             ) : activeTabData.type === "writing" ? (
               <WritingPanel result={activeResult} testData={activeTestData} />
             ) : (
@@ -429,7 +437,7 @@ export default function FullMockResults() {
           </button>
           <button
             onClick={() => setLocation("/dashboard")}
-            className="px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors"
+            className="px-5 py-2.5 bg-amber-500 text-white text-sm font-semibold rounded-xl hover:bg-amber-600 transition-colors"
           >
             Go to Dashboard
           </button>
