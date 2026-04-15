@@ -1333,9 +1333,6 @@ function SpeakingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange,
             ) : (
               <div className="space-y-3">
                 <audio controls src={audioUrl} className="w-full h-10 rounded-lg" />
-                <Button variant="outline" size="sm" onClick={reset} className="gap-2 text-xs" data-testid="button-re-record">
-                  Re-record
-                </Button>
               </div>
             )}
           </div>
@@ -2462,7 +2459,6 @@ function SpeakingAIOSection({ parts, onPartRecorded }: {
                   <CheckCircle className="w-3 h-3" /> Запись сохранена
                 </div>
               )}
-              <button onClick={() => { resetRec(); setUploadError(null); }} className="text-xs text-gray-500 hover:text-gray-700 underline" data-testid="aio-speaking-re-record">Перезаписать</button>
             </div>
           )}
         </div>

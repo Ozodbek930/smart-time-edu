@@ -207,16 +207,6 @@ function RecordingSection({
           />
           <div className="flex gap-2">
             <Button
-              variant="outline"
-              size="sm"
-              onClick={reset}
-              className="gap-2"
-              data-testid={`button-re-record-${test.id}`}
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              {t.speaking.reRecord}
-            </Button>
-            <Button
               size="sm"
               onClick={() => submitMutation.mutate()}
               disabled={submitMutation.isPending}
