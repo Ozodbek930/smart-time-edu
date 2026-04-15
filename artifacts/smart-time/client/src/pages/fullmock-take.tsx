@@ -1810,6 +1810,17 @@ function SpeakingAIOSection({ parts, onPartRecorded }: {
     else { goToPartPrep(phase.partIdx); }
   };
 
+  // Auto-start recording when entering part_active
+  const activePartKey = phase.type === "part_active" ? phase.partIdx : -1;
+  useEffect(() => {
+    if (phase.type !== "part_active") return;
+    const t = setTimeout(() => {
+      resetRec();
+      startRecording();
+    }, 400);
+    return () => clearTimeout(t);
+  }, [activePartKey]);
+
   // Upload blob to server as soon as recording stops
   useEffect(() => {
     if (!audioBlob || phase.type !== "part_active") return;
@@ -2104,9 +2115,9 @@ function SpeakingAIOSection({ parts, onPartRecorded }: {
           {!audioUrl ? (
             <div className="flex items-center gap-3 flex-wrap">
               {!isRecording ? (
-                <button onClick={startRecording} className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-semibold transition-colors" data-testid="aio-speaking-start-rec">
-                  <Mic className="w-3.5 h-3.5" /> Start Recording
-                </button>
+                <div className="flex items-center gap-2 text-sm text-rose-500 italic">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Запуск микрофона...
+                </div>
               ) : (
                 <>
                   <motion.div className="w-3 h-3 rounded-full bg-red-500" animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1, repeat: Infinity }} />
