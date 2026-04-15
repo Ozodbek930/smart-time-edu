@@ -1374,7 +1374,7 @@ export function FullMockSection() {
   const handleFinish = () => {
     clearProgress(id ?? "");
     clearSectionElapsed(id ?? "");
-    setLocation("/fullmock");
+    setLocation(`/fullmock/${id}/results`);
   };
 
   const handleExit = () => {
@@ -2753,7 +2753,7 @@ export default function FullMockTake() {
   const handleStart = () => {
     if (id) {
       clearProgress(id);
-      setLocation(`/fullmock/${id}/exam`);
+      setLocation(`/fullmock/${id}/section/0`);
     }
   };
 
@@ -2818,11 +2818,11 @@ export default function FullMockTake() {
               <Shield className="w-5 h-5" /> Exam Rules
             </div>
             <ul className="space-y-2 text-sm text-sky-900 dark:text-sky-200">
-              <li className="flex items-start gap-2"><ArrowLeft className="w-4 h-4 mt-0.5 shrink-0" /> All sections (Listening, Reading, Writing, Speaking) are shown on <strong>one page</strong> — scroll to move between them.</li>
-              <li className="flex items-start gap-2"><Clock className="w-4 h-4 mt-0.5 shrink-0" /> One <strong>global countdown timer</strong> runs for the entire exam — manage your time across all sections.</li>
+              <li className="flex items-start gap-2"><Layers className="w-4 h-4 mt-0.5 shrink-0" /> Each section (Listening, Reading, Writing, Speaking) is on its <strong>own page</strong> — complete one, then move to the next.</li>
+              <li className="flex items-start gap-2"><Clock className="w-4 h-4 mt-0.5 shrink-0" /> Each section has its <strong>own countdown timer</strong> — submit before time runs out.</li>
               <li className="flex items-start gap-2"><X className="w-4 h-4 mt-0.5 shrink-0" /> Correct answers are <strong>not shown</strong> during the exam.</li>
-              <li className="flex items-start gap-2"><Send className="w-4 h-4 mt-0.5 shrink-0" /> Click <strong>Submit All</strong> when you are done — this submits all sections at once.</li>
-              <li className="flex items-start gap-2"><Trophy className="w-4 h-4 mt-0.5 shrink-0" /> Use the <strong>question navigator</strong> at the bottom to quickly jump to any question.</li>
+              <li className="flex items-start gap-2"><Send className="w-4 h-4 mt-0.5 shrink-0" /> Click <strong>Submit</strong> at the end of each section to save your answers.</li>
+              <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 mt-0.5 shrink-0" /> You can <strong>pause and resume</strong> the exam — your progress is saved between sections.</li>
             </ul>
           </div>
 
@@ -2869,9 +2869,20 @@ export default function FullMockTake() {
 
           {/* Action button */}
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button onClick={handleStart} size="lg" className="gap-2 flex-1" data-testid="button-start-exam">
-              <Trophy className="w-5 h-5" /> Start Full Mock Exam
-            </Button>
+            {isResumable ? (
+              <>
+                <Button onClick={handleResume} size="lg" className="gap-2 flex-1" data-testid="button-resume-exam">
+                  <ChevronRight className="w-5 h-5" /> Resume Exam
+                </Button>
+                <Button onClick={handleStart} size="lg" variant="outline" className="gap-2" data-testid="button-start-exam">
+                  <Trophy className="w-5 h-5" /> Start Over
+                </Button>
+              </>
+            ) : (
+              <Button onClick={handleStart} size="lg" className="gap-2 flex-1" data-testid="button-start-exam">
+                <Trophy className="w-5 h-5" /> Start Full Mock Exam
+              </Button>
+            )}
           </div>
 
         </motion.div>
