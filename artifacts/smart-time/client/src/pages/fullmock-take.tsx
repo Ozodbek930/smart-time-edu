@@ -1359,6 +1359,296 @@ function SpeakingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Multi-Listening Section Exam (multiple listening tests on ONE page)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function MultiListeningSectionExam({ tests, onSubmitted, onTimerChange, submitRef, fullmockId, initialSeconds }: {
+  tests: ListeningTest[];
+  onSubmitted: () => void;
+  onTimerChange?: (remaining: number) => void;
+  submitRef?: MutableRefObject<(() => void) | null>;
+  fullmockId?: string;
+  initialSeconds?: number;
+}) {
+  const { toast } = useToast();
+  const totalDuration = tests.reduce((sum, t) => sum + (t.duration || 30), 0);
+  const [answersByTest, setAnswersByTest] = useState<Record<string, Record<number, number | string>>>({});
+  const [timerDone, setTimerDone] = useState(false);
+
+  const timer = useCountdownTimer(totalDuration, () => {
+    setTimerDone(true);
+    submitMutation.mutate();
+  }, !timerDone, initialSeconds);
+
+  useEffect(() => { onTimerChange?.(timer.secondsLeft); }, [timer.secondsLeft]);
+
+  const submitMutation = useMutation({
+    mutationFn: async () => {
+      for (const test of tests) {
+        await apiRequest("POST", "/api/test-results", {
+          testType: "listening",
+          testId: test.id,
+          fullmockId: fullmockId ?? null,
+          answers: answersByTest[test.id] ?? {},
+        });
+      }
+    },
+    onSuccess: () => onSubmitted(),
+    onError: () => toast({ title: "Error saving answers. Please try again.", variant: "destructive" }),
+  });
+
+  const handleManualSubmit = () => {
+    if (!window.confirm("Submit all listening sections? You cannot go back.")) return;
+    submitMutation.mutate();
+  };
+
+  useEffect(() => { if (submitRef) submitRef.current = handleManualSubmit; });
+
+  const timerMins = Math.floor(timer.secondsLeft / 60);
+  const timerSecs = timer.secondsLeft % 60;
+
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      <div className={`shrink-0 flex items-center justify-between px-4 py-2 border-b text-sm font-semibold ${
+        timer.isCritical ? "bg-red-50 border-red-200 text-red-700" :
+        timer.isWarning  ? "bg-amber-50 border-amber-200 text-amber-700" :
+        "bg-gray-50 border-gray-200 text-gray-700"
+      }`}>
+        <span className="flex items-center gap-1.5 text-xs uppercase tracking-wide font-semibold opacity-70">
+          <Headphones className="w-3.5 h-3.5" /> Listening — Time Remaining
+        </span>
+        <span className="font-mono text-base">{timerMins}:{String(timerSecs).padStart(2, "0")}</span>
+      </div>
+
+      <div className="flex-1 overflow-y-auto bg-white">
+        {tests.map((test, testIdx) => {
+          const isMultiSec = (test.testSections as any[])?.length > 0;
+          const sections = isMultiSec ? (test.testSections as any[]) : [{ questions: test.questions, audioUrl: test.audioUrl }];
+          let gN = 0;
+          const ranges = sections.map((sec: any) => {
+            const qs = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]).filter((q: any) => q.type !== "text");
+            const start = gN + 1; gN += qs.length;
+            return { start, end: gN };
+          });
+          return (
+            <div key={test.id} className={testIdx > 0 ? "border-t-4 border-amber-100" : ""}>
+              {tests.length > 1 && (
+                <div className="bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex items-center gap-2">
+                  <Headphones className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm font-bold text-amber-800">Listening Part {testIdx + 1}</span>
+                  {test.title && <span className="text-xs text-amber-600 font-normal">— {test.title}</span>}
+                </div>
+              )}
+              <div className="max-w-4xl mx-auto px-6 pb-8">
+                {isMultiSec ? (
+                  (test.testSections as any[]).map((sec: any, sIdx: number) => {
+                    const qs: ListeningQuestion[] = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
+                    const range = ranges[sIdx] || { start: 1, end: qs.length };
+                    return (
+                      <div key={sIdx} className="space-y-4 pt-6">
+                        <h2 className="text-xl font-bold text-gray-900">
+                          Section {testIdx + 1}.{sIdx + 1} <span className="text-gray-400 font-normal text-base">Questions {range.start}–{range.end}</span>
+                        </h2>
+                        {sec.audioUrl && (
+                          <div className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-3">
+                            <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Audio</p>
+                            <audio controls className="w-full h-9 rounded" src={sec.audioUrl} />
+                          </div>
+                        )}
+                        {sec.mapUrl ? (
+                          <div className="flex gap-5 items-start">
+                            <div className="w-64 shrink-0"><MapViewer mapUrl={sec.mapUrl} mapCaption={sec.mapCaption} /></div>
+                            <div className="flex-1 min-w-0">
+                              <MockListeningQuiz questions={qs} testId={`${test.id}-s${sIdx}`}
+                                onAnswersChange={a => setAnswersByTest(p => ({ ...p, [test.id]: { ...(p[test.id] ?? {}), ...a } }))}
+                                hideNav startQNum={range.start} />
+                            </div>
+                          </div>
+                        ) : (
+                          <MockListeningQuiz questions={qs} testId={`${test.id}-s${sIdx}`}
+                            onAnswersChange={a => setAnswersByTest(p => ({ ...p, [test.id]: { ...(p[test.id] ?? {}), ...a } }))}
+                            hideNav startQNum={range.start} />
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="space-y-4 pt-6">
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Part {testIdx + 1} <span className="text-gray-400 font-normal text-base">Questions 1–{ranges[0]?.end || "?"}</span>
+                    </h2>
+                    {test.audioUrl && (
+                      <div className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-3">
+                        <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Audio — Listen carefully</p>
+                        <audio controls className="w-full h-9 rounded" src={test.audioUrl} />
+                      </div>
+                    )}
+                    <MockListeningQuiz questions={test.questions} testId={test.id}
+                      onAnswersChange={a => setAnswersByTest(p => ({ ...p, [test.id]: a }))} />
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="shrink-0 border-t bg-white px-4 py-3 flex justify-end">
+        <Button onClick={() => submitMutation.mutate()} disabled={submitMutation.isPending}
+          className="bg-amber-500 hover:bg-amber-600 text-white gap-2" data-testid="button-submit-mock-section">
+          {submitMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" />Submitting…</> : <><Send className="w-4 h-4" />Submit Listening</>}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Multi-Reading Section Exam (multiple reading tests on ONE page)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function MultiReadingSectionExam({ tests, onSubmitted, onTimerChange, submitRef, fullmockId, initialSeconds }: {
+  tests: ReadingTest[];
+  onSubmitted: () => void;
+  onTimerChange?: (remaining: number) => void;
+  submitRef?: MutableRefObject<(() => void) | null>;
+  fullmockId?: string;
+  initialSeconds?: number;
+}) {
+  const { toast } = useToast();
+  const totalDuration = tests.reduce((sum, t) => sum + (t.duration || 60), 0);
+  const [answersByTest, setAnswersByTest] = useState<Record<string, Record<number, number | string>>>({});
+  const [timerDone, setTimerDone] = useState(false);
+
+  const timer = useCountdownTimer(totalDuration, () => {
+    setTimerDone(true);
+    submitMutation.mutate();
+  }, !timerDone, initialSeconds);
+
+  useEffect(() => { onTimerChange?.(timer.secondsLeft); }, [timer.secondsLeft]);
+
+  const submitMutation = useMutation({
+    mutationFn: async () => {
+      for (const test of tests) {
+        await apiRequest("POST", "/api/test-results", {
+          testType: "reading",
+          testId: test.id,
+          fullmockId: fullmockId ?? null,
+          answers: answersByTest[test.id] ?? {},
+        });
+      }
+    },
+    onSuccess: () => onSubmitted(),
+    onError: () => toast({ title: "Error saving answers. Please try again.", variant: "destructive" }),
+  });
+
+  const handleManualSubmit = () => {
+    if (!window.confirm("Submit all reading sections? You cannot go back.")) return;
+    submitMutation.mutate();
+  };
+
+  useEffect(() => { if (submitRef) submitRef.current = handleManualSubmit; });
+
+  const timerMins = Math.floor(timer.secondsLeft / 60);
+  const timerSecs = timer.secondsLeft % 60;
+
+  return (
+    <div className="flex flex-col h-full min-h-0 bg-white">
+      <div className={`shrink-0 flex items-center justify-between px-4 py-2 border-b text-sm font-semibold ${
+        timer.isCritical ? "bg-red-50 border-red-200 text-red-700" :
+        timer.isWarning  ? "bg-amber-50 border-amber-200 text-amber-700" :
+        "bg-gray-50 border-gray-200 text-gray-700"
+      }`}>
+        <span className="flex items-center gap-1.5 text-xs uppercase tracking-wide font-semibold opacity-70">
+          <BookOpen className="w-3.5 h-3.5" /> Reading — Time Remaining
+        </span>
+        <span className="font-mono text-base">{timerMins}:{String(timerSecs).padStart(2, "0")}</span>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {tests.map((test, testIdx) => {
+          const isMultiSec = (test.testSections as any[])?.length > 0;
+          const sections = isMultiSec ? (test.testSections as any[]) : [{ questions: test.questions, passage: test.passage }];
+          let gRN = 0;
+          const ranges = sections.map((sec: any) => {
+            const qs = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]).filter((q: any) => q.type !== "text");
+            const start = gRN + 1; gRN += qs.length;
+            return { start, end: gRN };
+          });
+          return (
+            <div key={test.id} className={testIdx > 0 ? "border-t-4 border-green-100" : ""}>
+              {tests.length > 1 && (
+                <div className="bg-green-50 border-b border-green-200 px-6 py-2.5 flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-bold text-green-800">Reading Part {testIdx + 1}</span>
+                  {test.title && <span className="text-xs text-green-600 font-normal">— {test.title}</span>}
+                </div>
+              )}
+              {isMultiSec ? (
+                (test.testSections as any[]).map((sec: any, pIdx: number) => {
+                  const qs: ReadingQuestion[] = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
+                  const range = ranges[pIdx] || { start: 1, end: qs.length };
+                  return (
+                    <div key={pIdx} className="border-b">
+                      <div className="px-6 pt-5 pb-3 bg-white">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
+                          <span className="uppercase tracking-widest font-semibold">Reading</span>
+                          <ChevronRight className="w-3 h-3" />
+                          <span className="text-gray-600 font-medium">Passage {pIdx + 1} ({range.start}–{range.end})</span>
+                        </div>
+                        <h2 className="text-xl font-bold text-gray-900">Passage {pIdx + 1} <span className="text-gray-400 font-normal text-base">Questions {range.start}–{range.end}</span></h2>
+                      </div>
+                      <div className="flex min-h-[350px]">
+                        <div className="w-1/2 border-r p-4 md:p-6 overflow-auto max-h-[65vh]">
+                          <HighlightablePassage passage={sec.passage || ""} testId={`${test.id}-s${pIdx}`} />
+                        </div>
+                        <div className="w-1/2 p-4 overflow-auto max-h-[65vh]">
+                          <MockReadingQuiz questions={qs} testId={`${test.id}-s${pIdx}`}
+                            onAnswersChange={a => setAnswersByTest(p => ({ ...p, [test.id]: { ...(p[test.id] ?? {}), ...a } }))}
+                            label={`Reading Q${range.start}–${range.end}`} startQNum={range.start} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <>
+                  <div className="shrink-0 px-6 pt-5 pb-3 bg-white border-b">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
+                      <span className="uppercase tracking-widest font-semibold">Reading</span>
+                      <ChevronRight className="w-3 h-3" />
+                      <span className="text-gray-600 font-medium">Passage 1 (1–{ranges[0]?.end || "?"})</span>
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900">Passage 1 <span className="text-gray-400 font-normal text-base">Questions 1–{ranges[0]?.end || "?"}</span></h2>
+                  </div>
+                  <div className="flex min-h-[350px]">
+                    <div className="w-1/2 border-r p-4 md:p-6 overflow-auto max-h-[65vh]">
+                      <HighlightablePassage passage={test.passage} testId={test.id} />
+                    </div>
+                    <div className="w-1/2 p-4 overflow-auto max-h-[65vh]">
+                      <MockReadingQuiz questions={test.questions} testId={test.id}
+                        onAnswersChange={a => setAnswersByTest(p => ({ ...p, [test.id]: a }))}
+                        label={`Reading Q1–${ranges[0]?.end || "?"}`} />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="shrink-0 border-t bg-white px-4 py-3 flex justify-end">
+        <Button onClick={() => submitMutation.mutate()} disabled={submitMutation.isPending}
+          className="bg-amber-500 hover:bg-amber-600 text-white gap-2" data-testid="button-submit-mock-section">
+          {submitMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" />Submitting…</> : <><Send className="w-4 h-4" />Submit Reading</>}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Section Exam Page — /fullmock/:id/section/:step
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1404,29 +1694,43 @@ export function FullMockSection() {
     });
   }, [fullMock, speakingTests, listeningTests, readingTests, writingTests]);
 
-  const currentSection = activeSections[step];
-  const isLastStep = step === activeSections.length - 1;
-  const progress = activeSections.length > 0 ? ((step + 1) / activeSections.length) * 100 : 0;
+  // Group consecutive same-type sections into one step (all listening on 1 page, all reading on 1 page)
+  const groupedSteps = useMemo(() => {
+    const groups: Array<{ type: string; sections: typeof activeSections }> = [];
+    for (const sec of activeSections) {
+      const last = groups[groups.length - 1];
+      if (last && last.type === sec.type) {
+        last.sections.push(sec);
+      } else {
+        groups.push({ type: sec.type, sections: [sec] });
+      }
+    }
+    return groups;
+  }, [activeSections]);
+
+  const currentGroup = groupedSteps[step];
+  const isLastStep = step === groupedSteps.length - 1;
+  const progress = groupedSteps.length > 0 ? ((step + 1) / groupedSteps.length) * 100 : 0;
   const completedSteps: number[] = getProgress(id ?? "").completed;
 
-  const getSectionInitialSeconds = (stepIdx: number): number | undefined => {
-    const section = activeSections[stepIdx];
-    if (!section?.testData) return undefined;
-    const durationSec = (section.testData as any).duration * 60;
-    const elapsed = getSectionElapsed(id ?? "")[stepIdx] || 0;
-    const remaining = Math.max(0, durationSec - elapsed);
+  const getGroupInitialSeconds = (groupIdx: number): number | undefined => {
+    const group = groupedSteps[groupIdx];
+    if (!group?.sections.length) return undefined;
+    const totalDurationSec = group.sections.reduce((sum, s) => sum + ((s.testData as any)?.duration ?? 0) * 60, 0);
+    const elapsed = getSectionElapsed(id ?? "")[groupIdx] || 0;
+    const remaining = Math.max(0, totalDurationSec - elapsed);
     return remaining > 0 ? remaining : undefined;
   };
 
   const saveCurrentTimer = () => {
-    if (!id || !currentSection?.testData) return;
-    const durationSec = (currentSection.testData as any).duration * 60;
-    const elapsed = durationSec - sectionRemainingRef.current;
+    if (!id || !currentGroup) return;
+    const totalDurationSec = currentGroup.sections.reduce((sum, s) => sum + ((s.testData as any)?.duration ?? 0) * 60, 0);
+    const elapsed = totalDurationSec - sectionRemainingRef.current;
     saveSectionElapsed(id, step, elapsed);
   };
 
   const navigateTo = (targetStep: number, skipConfirm = false) => {
-    if (targetStep < 0 || targetStep >= activeSections.length) return;
+    if (targetStep < 0 || targetStep >= groupedSteps.length) return;
     if (!sectionDone && !completedSteps.includes(step) && !skipConfirm) {
       if (!window.confirm("This section hasn't been submitted. Navigate away? Your progress in this section won't be saved.")) return;
     }
@@ -1454,16 +1758,6 @@ export function FullMockSection() {
     }
   };
 
-  // Unique section types in order — must be BEFORE early return (Rules of Hooks)
-  const uniqueTypes = useMemo(() => {
-    const seen = new Set<string>();
-    const types: string[] = [];
-    for (const s of activeSections) {
-      if (!seen.has(s.type)) { seen.add(s.type); types.push(s.type); }
-    }
-    return types;
-  }, [activeSections]);
-
   if (loadingMock || !fullMock) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -1472,8 +1766,8 @@ export function FullMockSection() {
     );
   }
 
-  const sectionLabel = currentSection
-    ? getSectionLabel(currentSection.type, currentSection.sectionIndex)
+  const sectionLabel = currentGroup
+    ? currentGroup.type.charAt(0).toUpperCase() + currentGroup.type.slice(1)
     : "";
 
   const getSectionTypeIcon = (type: string, active: boolean) => {
@@ -1485,21 +1779,6 @@ export function FullMockSection() {
     return <Trophy className={cls} />;
   };
 
-  const getTypeTotalDuration = (type: string) => {
-    return activeSections.filter(s => s.type === type).reduce((sum, s) => sum + (((s.testData as any)?.duration) || 0), 0);
-  };
-
-  // Compute question count for each section
-  const getQCount = (section: typeof activeSections[0]): number => {
-    const td = section.testData as any;
-    if (!td) return 0;
-    const secs = td.testSections?.length > 0 ? td.testSections : [{ questions: td.questions || [] }];
-    return secs.reduce((s: number, sec: any) => {
-      const qs = ((sec.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]);
-      return s + qs.filter((q: any) => q.type !== "text").length;
-    }, 0);
-  };
-  const totalQs = activeSections.filter(s => s.type !== "speaking").reduce((s, sec) => s + getQCount(sec), 0);
 
   return (
     <div
@@ -1516,24 +1795,27 @@ export function FullMockSection() {
           <span className="font-bold text-sm text-gray-900 hidden sm:block">Smart Time</span>
         </div>
 
-        {/* Section TYPE tabs */}
+        {/* Section TYPE tabs — one per grouped step */}
         <div className="flex items-center gap-0.5 flex-1 justify-center overflow-x-auto">
-          {uniqueTypes.map(type => {
-            const isCurrent = currentSection?.type === type;
-            const totalMin = getTypeTotalDuration(type);
+          {groupedSteps.map((grp, gIdx) => {
+            const isCurrent = gIdx === step;
+            const isCompleted = completedSteps.includes(gIdx) || (sectionDone && gIdx === step);
+            const totalMin = grp.sections.reduce((sum, s) => sum + (((s.testData as any)?.duration) || 0), 0);
             return (
-              <div
-                key={type}
+              <button
+                key={gIdx}
+                onClick={() => navigateTo(gIdx, isCompleted || (sectionDone && gIdx === step))}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-colors ${
-                  isCurrent
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-400"
+                  isCurrent ? "bg-amber-500 text-white" :
+                  isCompleted ? "bg-green-100 text-green-700" :
+                  "text-gray-400 hover:text-gray-600"
                 }`}
               >
-                {getSectionTypeIcon(type, isCurrent)}
-                <span className="capitalize">{type}</span>
-                {totalMin > 0 && <span className={`text-[10px] ml-0.5 ${isCurrent ? "text-blue-200" : "text-gray-300"}`}>{totalMin} min</span>}
-              </div>
+                {getSectionTypeIcon(grp.type, isCurrent)}
+                <span className="capitalize">{grp.type}</span>
+                {grp.sections.length > 1 && <span className={`text-[10px] ml-0.5 ${isCurrent ? "text-amber-200" : "text-gray-300"}`}>×{grp.sections.length}</span>}
+                {totalMin > 0 && <span className={`text-[10px] ml-0.5 ${isCurrent ? "text-amber-200" : "text-gray-300"}`}>{totalMin}m</span>}
+              </button>
             );
           })}
         </div>
@@ -1577,52 +1859,14 @@ export function FullMockSection() {
         </div>
       </div>
 
-      {/* ── SmartCEFR-style Parts Sub-Bar ───────────────────────── */}
-      <div className="shrink-0 flex items-center gap-1 px-4 py-1.5 border-b bg-white overflow-x-auto">
-        <span className="text-xs text-gray-400 font-semibold shrink-0 mr-2">Parts:</span>
-        {activeSections.map((section, idx) => {
-          const isCurrent = idx === step;
-          const isCompleted = completedSteps.includes(idx) || (sectionDone && idx === step);
-          const qCount = getQCount(section);
-          const label = getSectionLabel(section.type, section.sectionIndex);
-          return (
-            <button
-              key={idx}
-              onClick={() => navigateTo(idx, isCompleted || (sectionDone && idx === step))}
-              data-testid={`tab-mock-section-${idx + 1}`}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold whitespace-nowrap transition-all ${
-                isCurrent
-                  ? "text-blue-700 bg-blue-50 border border-blue-200"
-                  : isCompleted
-                    ? "text-green-700 border border-green-200 bg-green-50 hover:bg-green-100"
-                    : "text-gray-600 border border-gray-200 bg-white hover:bg-gray-50"
-              }`}
-            >
-              {isCompleted && !isCurrent && <CheckCircle className="w-3 h-3 shrink-0 text-green-600" />}
-              <span>{label}</span>
-              {qCount > 0 && (
-                <span className={`text-[10px] font-normal ${isCurrent ? "text-blue-500" : isCompleted ? "text-green-500" : "text-gray-400"}`}>
-                  {qCount}Q
-                </span>
-              )}
-            </button>
-          );
-        })}
-        {totalQs > 0 && (
-          <span className="ml-auto text-xs text-gray-500 font-semibold shrink-0 pl-3 whitespace-nowrap">
-            Total: {totalQs}Q
-          </span>
-        )}
-      </div>
-
       {/* ── Progress bar ─────────────────────────────────────────── */}
       <div className="h-0.5 bg-gray-200 shrink-0">
-        <div className="h-0.5 bg-blue-600 transition-all duration-500" style={{ width: `${progress}%` }} />
+        <div className="h-0.5 bg-amber-500 transition-all duration-500" style={{ width: `${progress}%` }} />
       </div>
 
       {/* ── Section content ──────────────────────────────────────── */}
       {completedSteps.includes(step) && !sectionDone && (
-        <div className="shrink-0 bg-blue-50 border-b border-blue-200 px-4 py-2 flex items-center gap-2 text-xs text-blue-800">
+        <div className="shrink-0 bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center gap-2 text-xs text-amber-800">
           <CheckCircle className="w-3.5 h-3.5 shrink-0" />
           This section was already submitted. You can review content or navigate to another section.
         </div>
@@ -1637,7 +1881,7 @@ export function FullMockSection() {
             onBack={step > 0 ? () => navigateTo(step - 1, true) : undefined}
             onNext={isLastStep ? handleFinish : () => navigateTo(step + 1, true)}
           />
-        ) : currentSection?.testData ? (
+        ) : currentGroup?.sections.some(s => s.testData) ? (
           <motion.div
             key={`section-${step}`}
             className="flex-1 flex flex-col min-h-0"
@@ -1646,63 +1890,66 @@ export function FullMockSection() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            {currentSection.type === "listening" && (
-              <ListeningSectionExam
-                test={currentSection.testData as ListeningTest}
-                onSubmitted={handleSectionSubmitted}
-                initialSeconds={getSectionInitialSeconds(step)}
-                onTimerChange={s => {
-                  sectionRemainingRef.current = s;
-                  const m = Math.floor(s / 60);
-                  const sec = s % 60;
-                  setTimerDisplay(`${m}:${String(sec).padStart(2, "0")}`);
-                  const total = (currentSection.testData as any)?.duration * 60 || 0;
-                  setIsTimerCritical(s <= 60);
-                  setIsTimerWarning(s <= Math.min(300, total * 0.15) && s > 60);
-                }}
-                submitRef={sectionSubmitRef}
-                fullmockId={id}
-              />
-            )}
-            {currentSection.type === "reading" && (
-              <ReadingSectionExam
-                test={currentSection.testData as ReadingTest}
-                onSubmitted={handleSectionSubmitted}
-                initialSeconds={getSectionInitialSeconds(step)}
-                onTimerChange={s => {
-                  sectionRemainingRef.current = s;
-                  const m = Math.floor(s / 60);
-                  const sec = s % 60;
-                  setTimerDisplay(`${m}:${String(sec).padStart(2, "0")}`);
-                  const total = (currentSection.testData as any)?.duration * 60 || 0;
-                  setIsTimerCritical(s <= 60);
-                  setIsTimerWarning(s <= Math.min(300, total * 0.15) && s > 60);
-                }}
-                submitRef={sectionSubmitRef}
-                fullmockId={id}
-              />
-            )}
-            {currentSection.type === "writing" && (
+            {currentGroup.type === "listening" && (() => {
+              const listeningTests = currentGroup.sections.filter(s => s.testData).map(s => s.testData as ListeningTest);
+              const totalSec = currentGroup.sections.reduce((sum, s) => sum + ((s.testData as any)?.duration ?? 0) * 60, 0);
+              const handleTimerChange = (s: number) => {
+                sectionRemainingRef.current = s;
+                const m = Math.floor(s / 60); const sec = s % 60;
+                setTimerDisplay(`${m}:${String(sec).padStart(2, "0")}`);
+                setIsTimerCritical(s <= 60);
+                setIsTimerWarning(s <= Math.min(300, totalSec * 0.15) && s > 60);
+              };
+              return listeningTests.length > 1 ? (
+                <MultiListeningSectionExam tests={listeningTests} onSubmitted={handleSectionSubmitted}
+                  initialSeconds={getGroupInitialSeconds(step)} onTimerChange={handleTimerChange}
+                  submitRef={sectionSubmitRef} fullmockId={id} />
+              ) : (
+                <ListeningSectionExam test={listeningTests[0]} onSubmitted={handleSectionSubmitted}
+                  initialSeconds={getGroupInitialSeconds(step)} onTimerChange={handleTimerChange}
+                  submitRef={sectionSubmitRef} fullmockId={id} />
+              );
+            })()}
+            {currentGroup.type === "reading" && (() => {
+              const readingTests = currentGroup.sections.filter(s => s.testData).map(s => s.testData as ReadingTest);
+              const totalSec = currentGroup.sections.reduce((sum, s) => sum + ((s.testData as any)?.duration ?? 0) * 60, 0);
+              const handleTimerChange = (s: number) => {
+                sectionRemainingRef.current = s;
+                const m = Math.floor(s / 60); const sec = s % 60;
+                setTimerDisplay(`${m}:${String(sec).padStart(2, "0")}`);
+                setIsTimerCritical(s <= 60);
+                setIsTimerWarning(s <= Math.min(300, totalSec * 0.15) && s > 60);
+              };
+              return readingTests.length > 1 ? (
+                <MultiReadingSectionExam tests={readingTests} onSubmitted={handleSectionSubmitted}
+                  initialSeconds={getGroupInitialSeconds(step)} onTimerChange={handleTimerChange}
+                  submitRef={sectionSubmitRef} fullmockId={id} />
+              ) : (
+                <ReadingSectionExam test={readingTests[0]} onSubmitted={handleSectionSubmitted}
+                  initialSeconds={getGroupInitialSeconds(step)} onTimerChange={handleTimerChange}
+                  submitRef={sectionSubmitRef} fullmockId={id} />
+              );
+            })()}
+            {currentGroup.type === "writing" && currentGroup.sections[0]?.testData && (
               <WritingSectionExam
-                test={currentSection.testData as WritingTest}
+                test={currentGroup.sections[0].testData as WritingTest}
                 onSubmitted={handleSectionSubmitted}
-                initialSeconds={getSectionInitialSeconds(step)}
+                initialSeconds={getGroupInitialSeconds(step)}
                 onTimerChange={s => {
                   sectionRemainingRef.current = s;
-                  const m = Math.floor(s / 60);
-                  const sec = s % 60;
+                  const m = Math.floor(s / 60); const sec = s % 60;
                   setTimerDisplay(`${m}:${String(sec).padStart(2, "0")}`);
-                  const total = (currentSection.testData as any)?.duration * 60 || 0;
+                  const totalSec = (currentGroup.sections[0].testData as any)?.duration * 60 || 0;
                   setIsTimerCritical(s <= 60);
-                  setIsTimerWarning(s <= Math.min(300, total * 0.15) && s > 60);
+                  setIsTimerWarning(s <= Math.min(300, totalSec * 0.15) && s > 60);
                 }}
                 submitRef={sectionSubmitRef}
                 fullmockId={id}
               />
             )}
-            {currentSection.type === "speaking" && (
+            {currentGroup.type === "speaking" && currentGroup.sections[0]?.testData && (
               <SpeakingSectionExam
-                test={currentSection.testData as SpeakingTest}
+                test={currentGroup.sections[0].testData as SpeakingTest}
                 onSubmitted={handleSectionSubmitted}
                 fullmockId={id}
               />

@@ -38,3 +38,11 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 - Email on registration via Gmail SMTP (requires `GMAIL_USER` and `GMAIL_APP_PASSWORD`)
 - DB schema: `artifacts/smart-time/shared/schema.ts` (uses its own drizzle config)
 - Run `pnpm --filter @workspace/smart-time run db:push` to sync schema changes
+
+### Full Mock Exam Flow
+- Intro (`/fullmock/:id`) → Section pages (`/fullmock/:id/section/0,1,2…`) → Results (`/fullmock/:id/results`)
+- `FullMockSection` groups `activeSections` by consecutive type into `groupedSteps` (e.g. all Listening = 1 step)
+- Multi-test components: `MultiListeningSectionExam` (all listening stacked), `MultiReadingSectionExam` (all reading stacked)
+- Single-test groups use the original `ListeningSectionExam`, `ReadingSectionExam`, `WritingSectionExam`, `SpeakingSectionExam`
+- Top bar shows one amber tab per grouped step; progress bar is amber; old "Parts:" sub-bar removed
+- Timer spans sum of all test durations in a group
