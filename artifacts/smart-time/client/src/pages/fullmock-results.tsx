@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Loader2, CheckCircle2, XCircle, Headphones, BookOpen, PenTool, Mic, Home, ChevronLeft, Trophy, AlertCircle } from "lucide-react";
 import type { TestResult } from "@shared/schema";
+import { bandToCEFR, CEFR_COLORS, CEFR_DESCRIPTORS } from "@/lib/testModeConfig";
+import { useModeStore } from "@/lib/useModeStore";
 
 interface Question {
   id: number;
@@ -206,6 +208,7 @@ export default function FullMockResults() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState(0);
+  const { mode } = useModeStore();
 
   const { data: fullMock, isLoading: loadingMock } = useQuery<FullMockTest>({
     queryKey: ["/api/fullmock-tests"],
@@ -275,6 +278,9 @@ export default function FullMockResults() {
   const totalScore = scoredSections.reduce((sum, t) => sum + (resultByType[t]?.score ?? 0), 0);
   const totalQs = scoredSections.reduce((sum, t) => sum + (resultByType[t]?.totalQuestions ?? 0), 0);
   const overallBand = totalQs > 0 ? ((totalScore / totalQs) * 9).toFixed(1) : "—";
+  const overallCEFR = overallBand !== "—" ? bandToCEFR(overallBand) : null;
+  const showCEFR = mode === "CEFR" || mode === "BOTH";
+  const showBand = mode === "IELTS" || mode === "BOTH";
 
   const tabs = uniqueTypes.map(type => {
     const cfg = SECTION_CONFIG[type as keyof typeof SECTION_CONFIG] ?? SECTION_CONFIG.listening;
@@ -329,9 +335,25 @@ export default function FullMockResults() {
             </div>
             <div className="text-center sm:text-left flex-1">
               <p className="text-sm text-gray-500 font-medium">Exam Completed</p>
-              <h2 className="text-2xl font-bold text-gray-900 mt-0.5">
-                Estimated Band: <span className="text-amber-600">{overallBand}</span>
-              </h2>
+              <div className="flex flex-wrap items-center gap-3 mt-0.5">
+                {showBand && (
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Band: <span className="text-amber-600">{overallBand}</span>
+                  </h2>
+                )}
+                {showCEFR && overallCEFR && (() => {
+                  const col = CEFR_COLORS[overallCEFR];
+                  return (
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold border ${col.bg} ${col.text} ${col.border}`}>
+                      {overallCEFR}
+                      <span className="text-xs font-normal opacity-75">CEFR</span>
+                    </span>
+                  );
+                })()}
+              </div>
+              {showCEFR && overallCEFR && (
+                <p className="text-xs text-gray-400 mt-1 max-w-xs">{CEFR_DESCRIPTORS[overallCEFR]}</p>
+              )}
               <p className="text-sm text-gray-500 mt-1">
                 Listening + Reading: {totalScore}/{totalQs} questions correct
               </p>

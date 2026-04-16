@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, Headphones, BookOpen, PenTool, ChevronRight, Award, Clock, FileCheck, LogOut, Trophy, Home, ArrowLeft } from "lucide-react";
+import { Mic, Headphones, BookOpen, PenTool, ChevronRight, Award, Clock, FileCheck, LogOut, Trophy, Home, ArrowLeft, ZoomIn, ZoomOut, Settings2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { motion } from "framer-motion";
@@ -9,6 +9,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import type { User, TestResult } from "@shared/schema";
 import { useEffect } from "react";
+import { useModeStore } from "@/lib/useModeStore";
+import { bandToCEFR, CEFR_COLORS, MODE_LABELS, MODE_DESCRIPTIONS } from "@/lib/testModeConfig";
+import type { TestMode } from "@/lib/testModeConfig";
+import { useFontSize } from "@/lib/fontSizeContext";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
@@ -26,6 +30,9 @@ export default function Dashboard() {
   const { t } = useI18n();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+
+  const { mode, setMode } = useModeStore();
+  const { fontSize, increase, decrease, canIncrease, canDecrease } = useFontSize();
 
   const { data: user, isLoading } = useQuery<User | null>({
     queryKey: ["/api/auth/me"],
@@ -216,6 +223,49 @@ export default function Dashboard() {
               {t.dashboardPage.welcome}, <span className="gradient-text">{user.fullName.split(" ")[0]}</span>!
             </h1>
             <p className="text-muted-foreground text-lg">{t.dashboardPage.subtitle}</p>
+          </motion.div>
+
+          {/* Settings panel: Test Mode + Font Size */}
+          <motion.div variants={fadeInUp} transition={{ duration: 0.5 }}>
+            <div className="bg-white border border-border/60 rounded-2xl p-4 flex flex-wrap items-center gap-5">
+              <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground shrink-0">
+                <Settings2 className="w-4 h-4" />
+                <span>Preferences</span>
+              </div>
+
+              {/* Test Mode Selector */}
+              <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Scoring Mode</span>
+                <div className="flex rounded-lg border border-border overflow-hidden text-xs font-semibold">
+                  {(["IELTS", "CEFR", "BOTH"] as TestMode[]).map(m => (
+                    <button
+                      key={m}
+                      onClick={() => setMode(m)}
+                      title={MODE_DESCRIPTIONS[m]}
+                      className={`flex-1 py-1.5 px-2 transition-colors whitespace-nowrap ${
+                        mode === m
+                          ? "bg-amber-500 text-white"
+                          : "bg-background text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {MODE_LABELS[m]}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground">{MODE_DESCRIPTIONS[mode]}</p>
+              </div>
+
+              {/* Font Size Control */}
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Font Size</span>
+                <div className="flex items-center gap-2 border border-border rounded-lg px-2 py-1.5 bg-background">
+                  <button onClick={decrease} disabled={!canDecrease} className="p-0.5 rounded hover:bg-muted disabled:opacity-30 transition-colors" title="Smaller"><ZoomOut className="w-4 h-4" /></button>
+                  <span className="text-sm font-mono font-semibold w-8 text-center tabular-nums">{fontSize}px</span>
+                  <button onClick={increase} disabled={!canIncrease} className="p-0.5 rounded hover:bg-muted disabled:opacity-30 transition-colors" title="Larger"><ZoomIn className="w-4 h-4" /></button>
+                </div>
+                <p className="text-[10px] text-muted-foreground">Reading &amp; Writing</p>
+              </div>
+            </div>
           </motion.div>
 
           <motion.div variants={fadeInUp} transition={{ duration: 0.5 }}>

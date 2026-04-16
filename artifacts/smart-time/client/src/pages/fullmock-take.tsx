@@ -9,8 +9,10 @@ import { Input } from "@/components/ui/input";
 import {
   Trophy, ArrowRight, ArrowLeft, CheckCircle, Headphones, Mic, BookOpen, PenTool,
   Loader2, Send, Clock, X, PenLine, Layers, Square, AlertTriangle,
-  ChevronRight, Shield, Timer, Lock, Pencil, Highlighter, NotebookPen
+  ChevronRight, Shield, Timer, Lock, Pencil, Highlighter, NotebookPen,
+  ZoomIn, ZoomOut, RotateCcw
 } from "lucide-react";
+import { useFontSize } from "@/lib/fontSizeContext";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { useI18n } from "@/lib/i18n";
@@ -864,6 +866,7 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, 
   fullmockId?: string;
 }) {
   const { toast } = useToast();
+  const { fontSize, increase, decrease, canIncrease, canDecrease } = useFontSize();
   const [answers, setAnswers] = useState<Record<number, number | string>>({});
   const [timerDone, setTimerDone] = useState(false);
 
@@ -916,14 +919,19 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, 
   return (
     <div className="flex flex-col h-full min-h-0 bg-white">
       {/* Timer bar */}
-      <div className={`shrink-0 flex items-center justify-between px-4 py-2 border-b text-sm font-semibold ${
+      <div className={`shrink-0 flex items-center gap-2 px-4 py-2 border-b text-sm font-semibold ${
         timer.isCritical ? "bg-red-50 border-red-200 text-red-700" :
         timer.isWarning  ? "bg-amber-50 border-amber-200 text-amber-700" :
         "bg-gray-50 border-gray-200 text-gray-700"
       }`}>
-        <span className="flex items-center gap-1.5 text-xs uppercase tracking-wide font-semibold opacity-70">
+        <span className="flex items-center gap-1.5 text-xs uppercase tracking-wide font-semibold opacity-70 flex-1">
           <BookOpen className="w-3.5 h-3.5" /> Reading — Time Remaining
         </span>
+        <div className="flex items-center gap-1 bg-white/70 rounded-lg px-1.5 py-0.5 border border-gray-200">
+          <button onClick={decrease} disabled={!canDecrease} title="Decrease font size" className="p-0.5 rounded hover:bg-gray-100 disabled:opacity-30 transition-colors"><ZoomOut className="w-3.5 h-3.5" /></button>
+          <span className="text-[10px] font-mono w-7 text-center">{fontSize}px</span>
+          <button onClick={increase} disabled={!canIncrease} title="Increase font size" className="p-0.5 rounded hover:bg-gray-100 disabled:opacity-30 transition-colors"><ZoomIn className="w-3.5 h-3.5" /></button>
+        </div>
         <span className="font-mono text-base">
           {readingTimerMins}:{String(readingTimerSecs).padStart(2, "0")}
         </span>
@@ -949,7 +957,7 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, 
                     </h2>
                   </div>
                   <div className="flex min-h-[350px]">
-                    <div className="w-1/2 border-r p-4 md:p-6 overflow-auto max-h-[65vh]">
+                    <div className="w-1/2 border-r p-4 md:p-6 overflow-auto max-h-[65vh]" style={{ fontSize }}>
                       <HighlightablePassage passage={sec.passage || ""} testId={`${test.id}-s${pIdx}`} />
                     </div>
                     <div className="w-1/2 p-4 overflow-auto max-h-[65vh]">
@@ -1030,6 +1038,7 @@ function WritingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, 
   fullmockId?: string;
 }) {
   const { toast } = useToast();
+  const { fontSize, increase, decrease, canIncrease, canDecrease } = useFontSize();
   const [response, setResponse] = useState("");
   const [timerDone, setTimerDone] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -1150,6 +1159,11 @@ function WritingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, 
               className="px-2.5 py-1 text-xs font-medium rounded border bg-background hover:bg-muted transition-colors"
               title="Undo"
             >Undo</button>
+            <div className="flex items-center gap-1 border rounded px-1.5 py-0.5 bg-background ml-1">
+              <button onClick={decrease} disabled={!canDecrease} title="Decrease font" className="p-0.5 rounded hover:bg-muted disabled:opacity-30 transition-colors"><ZoomOut className="w-3 h-3" /></button>
+              <span className="text-[10px] font-mono w-6 text-center tabular-nums">{fontSize}</span>
+              <button onClick={increase} disabled={!canIncrease} title="Increase font" className="p-0.5 rounded hover:bg-muted disabled:opacity-30 transition-colors"><ZoomIn className="w-3 h-3" /></button>
+            </div>
             <div className="ml-auto flex items-center gap-3">
               <span className={`text-xs font-mono font-semibold tabular-nums ${
                 wordCount === 0 ? "text-muted-foreground" :
@@ -1172,7 +1186,8 @@ function WritingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, 
           <textarea
             ref={textareaRef}
             placeholder={`Begin writing here...\n\nYou must write at least ${minWords} words.`}
-            className="flex-1 resize-none text-sm p-4 bg-white dark:bg-slate-900 text-foreground leading-relaxed focus:outline-none focus:ring-0 border-0"
+            className="flex-1 resize-none p-4 bg-white dark:bg-slate-900 text-foreground leading-relaxed focus:outline-none focus:ring-0 border-0"
+            style={{ fontSize }}
             value={response}
             onChange={e => setResponse(e.target.value)}
             spellCheck

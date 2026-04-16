@@ -4,6 +4,7 @@ import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { I18nProvider } from "@/lib/i18n";
+import { FontSizeProvider } from "@/lib/fontSizeContext";
 import { FloatingNotebook } from "@/components/floating-notebook";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
@@ -75,7 +76,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <I18nProvider>
-          <AppInner />
+          <FontSizeProvider>
+            <AppInner />
+          </FontSizeProvider>
         </I18nProvider>
       </TooltipProvider>
     </QueryClientProvider>
