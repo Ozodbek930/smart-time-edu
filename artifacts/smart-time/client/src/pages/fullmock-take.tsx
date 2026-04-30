@@ -1743,6 +1743,17 @@ export function FullMockSection() {
 
   const navigateTo = (targetStep: number, skipConfirm = false) => {
     if (targetStep < 0 || targetStep >= groupedSteps.length) return;
+    
+    // Restriction: Cannot go back to previous sections
+    if (targetStep < step) {
+      toast({
+        title: "Navigation Restricted",
+        description: "You cannot go back to previous sections during a Full Mock exam.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!sectionDone && !completedSteps.includes(step) && !skipConfirm) {
       if (!window.confirm("This section hasn't been submitted. Navigate away? Your progress in this section won't be saved.")) return;
     }
@@ -1817,9 +1828,11 @@ export function FullMockSection() {
               <button
                 key={gIdx}
                 onClick={() => navigateTo(gIdx, isCompleted || (sectionDone && gIdx === step))}
+                disabled={gIdx < step}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-colors ${
                   isCurrent ? "bg-amber-500 text-white" :
                   isCompleted ? "bg-green-100 text-green-700" :
+                  gIdx < step ? "text-gray-300 cursor-not-allowed opacity-50" :
                   "text-gray-400 hover:text-gray-600"
                 }`}
               >
@@ -1890,7 +1903,6 @@ export function FullMockSection() {
             key="done"
             label={sectionLabel}
             isLast={isLastStep}
-            onBack={step > 0 ? () => navigateTo(step - 1, true) : undefined}
             onNext={isLastStep ? handleFinish : () => navigateTo(step + 1, true)}
           />
         ) : currentGroup?.sections.some(s => s.testData) ? (
