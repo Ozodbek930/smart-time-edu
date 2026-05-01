@@ -1,3 +1,3 @@
 // @ts-ignore
-import app from "../dist/index.cjs";
-export default app;
+const app = require("./server.cjs");
+export default app.default || app;
