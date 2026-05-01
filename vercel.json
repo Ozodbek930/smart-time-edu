@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "buildCommand": "cd artifacts/smart-time && npm run build",
+  "outputDirectory": "artifacts/smart-time/dist/public",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/artifacts/smart-time/api/index.ts"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/artifacts/smart-time/index.html"
+    }
+  ],
+  "functions": {
+    "artifacts/smart-time/api/index.ts": {
+      "includeFiles": "artifacts/smart-time/server/**"
+    }
+  }
+}

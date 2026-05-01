@@ -63,7 +63,8 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
+// setup function for routes and static files
+async function setupApp() {
   await registerRoutes(httpServer, app);
   await seedData();
 
@@ -80,20 +81,24 @@ app.use((req, res, next) => {
     return res.status(status).json({ message });
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
-    const { setupVite } = await import("./vite");
-    await setupVite(httpServer, app);
+    try {
+      const { setupVite } = await import("./vite");
+      await setupVite(httpServer, app);
+    } catch (e) {
+      log("Vite setup skipped (likely production build or missing vite.ts)");
+    }
   }
+}
 
-  // ONLY listen if not on Vercel
-  if (process.env.VERCEL) {
-    log("Running on Vercel - listen() skipped");
-  } else {
+// Start setup
+const setupPromise = setupApp();
+
+// Handle Vercel or local startup
+if (!process.env.VERCEL) {
+  setupPromise.then(() => {
     const port = parseInt(process.env.PORT || "5000", 10);
     httpServer.listen(
       {
@@ -104,7 +109,11 @@ app.use((req, res, next) => {
         log(`serving on port ${port}`);
       },
     );
-  }
-})();
+  });
+}
 
-export default app;
+// Export a handler for Vercel
+export default async (req: any, res: any) => {
+  await setupPromise;
+  return app(req, res);
+};
