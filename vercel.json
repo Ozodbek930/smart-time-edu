@@ -1,0 +1,15 @@
+{
+  "buildCommand": "pnpm --filter @workspace/smart-time run build",
+  "outputDirectory": "artifacts/smart-time/dist/public",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "artifacts/smart-time/api/index.ts"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "artifacts/smart-time/index.html"
+    }
+  ]
+}
