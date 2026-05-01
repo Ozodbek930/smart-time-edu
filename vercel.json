@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "cd artifacts/smart-time && npm run build",
+  "buildCommand": "pnpm run build",
   "outputDirectory": "artifacts/smart-time/dist/public",
   "framework": "vite",
   "rewrites": [
