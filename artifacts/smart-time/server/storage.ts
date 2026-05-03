@@ -14,6 +14,7 @@ import {
   onlineLessons,
   onlineLessonQuestions,
   onlineLessonResults,
+  notifications,
   type User,
   type InsertUser,
   type SpeakingTest,
@@ -39,6 +40,8 @@ import {
   type InsertOnlineLessonQuestion,
   type OnlineLessonResult,
   type InsertOnlineLessonResult,
+  type Notification,
+  type InsertNotification,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -80,6 +83,7 @@ export interface IStorage {
   getTestResultsByUser(userId: string): Promise<TestResult[]>;
   getTestResultsByFullmock(fullmockId: string, userId: string): Promise<TestResult[]>;
   createTestResult(result: InsertTestResult): Promise<TestResult>;
+  updateTestResult(id: string, data: Partial<TestResult>): Promise<TestResult | undefined>;
   deleteTestResult(id: string): Promise<void>;
 
   getVideoLessons(): Promise<VideoLesson[]>;
@@ -103,6 +107,11 @@ export interface IStorage {
   getOnlineLessonResults(lessonId: string): Promise<OnlineLessonResult[]>;
   getOnlineLessonResultByUser(lessonId: string, userId: string): Promise<OnlineLessonResult | undefined>;
   createOnlineLessonResult(result: InsertOnlineLessonResult): Promise<OnlineLessonResult>;
+
+  // Notifications
+  getNotificationsByUser(userId: string): Promise<Notification[]>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationRead(id: string): Promise<Notification | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -117,7 +126,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+    const [user] = await db.insert(users).values(insertUser as any).returning();
     return user;
   }
 
@@ -260,8 +269,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTestResult(result: InsertTestResult): Promise<TestResult> {
-    const [created] = await db.insert(testResults).values(result).returning();
+    const [created] = await db.insert(testResults).values(result as any).returning();
     return created;
+  }
+
+  async updateTestResult(id: string, data: Partial<TestResult>): Promise<TestResult | undefined> {
+    const [updated] = await db.update(testResults).set(data).where(eq(testResults.id, id)).returning();
+    return updated;
   }
 
   async deleteTestResult(id: string): Promise<void> {
@@ -325,7 +339,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async toggleVideoLesson(id: string, isActive: boolean): Promise<VideoLesson | undefined> {
-    const [updated] = await db.update(videoLessons).set({ isActive }).where(eq(videoLessons.id, id)).returning();
+    const [updated] = await db.update(videoLessons).set({ isActive: isActive as any }).where(eq(videoLessons.id, id)).returning();
     return updated;
   }
 
@@ -390,8 +404,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOnlineLessonResult(result: InsertOnlineLessonResult): Promise<OnlineLessonResult> {
-    const [created] = await db.insert(onlineLessonResults).values(result).returning();
+    const [created] = await db.insert(onlineLessonResults).values(result as any).returning();
     return created;
+  }
+
+  // Notifications
+  async getNotificationsByUser(userId: string): Promise<Notification[]> {
+    const { desc } = await import("drizzle-orm");
+    return db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt));
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [created] = await db.insert(notifications).values(notification as any).returning();
+    return created;
+  }
+
+  async markNotificationRead(id: string): Promise<Notification | undefined> {
+    const [updated] = await db.update(notifications).set({ isRead: true } as any).where(eq(notifications.id, id)).returning();
+    return updated;
   }
 }
 

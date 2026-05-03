@@ -3,6 +3,43 @@ import { pgTable, text, varchar, integer, jsonb, boolean, timestamp } from "driz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export type ListeningQuestion = {
+  id: number;
+  question: string;
+  options: string[];
+  correctAnswer: number | string;
+  type?: "mcq" | "tfng" | "ynng" | "completion" | "short-answer" | "matching";
+  imageUrl?: string | null;
+  imageCaption?: string;
+};
+
+export type ReadingQuestion = {
+  id: number;
+  question: string;
+  options: string[];
+  correctAnswer: number | string;
+  type?: "mcq" | "tfng" | "ynng" | "completion" | "short-answer" | "matching";
+};
+
+export type ListeningTestSection = {
+  sectionNumber: number;
+  audioUrl?: string | null;
+  mapUrl?: string | null;
+  mapCaption?: string;
+  questions: ListeningQuestion[];
+};
+
+export type ReadingTestSection = {
+  sectionNumber: number;
+  passage: string;
+  pdfUrl?: string | null;
+  questions: ReadingQuestion[];
+};
+
+export type LessonAttachment = { type: "file" | "link"; name: string; url: string };
+
+export type FullMockSection = { type: "speaking" | "listening" | "reading" | "writing"; testId: string; sectionIndex?: number };
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
@@ -88,6 +125,8 @@ export const testResults = pgTable("test_results", {
   fullmockId: varchar("fullmock_id"),
   score: integer("score"),
   totalQuestions: integer("total_questions"),
+  bandScoreIELTS: text("band_score_ielts"),
+  bandScoreCEFR: text("band_score_cefr"),
   answers: jsonb("answers").$type<Record<string, any>>(),
   completedAt: timestamp("completed_at").notNull().defaultNow(),
 });
@@ -99,6 +138,16 @@ export const notes = pgTable("notes", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  message: text("message").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  type: text("type").notNull().default("info"), // 'grade', 'info', etc.
+  link: text("link"), // Optional link to the result
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const videoLessons = pgTable("video_lessons", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   message: text("message").notNull(),
@@ -107,7 +156,6 @@ export const videoLessons = pgTable("video_lessons", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export type LessonAttachment = { type: "file" | "link"; name: string; url: string };
 
 export const onlineLessons = pgTable("online_lessons", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -141,22 +189,6 @@ export const onlineLessonResults = pgTable("online_lesson_results", {
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
 });
 
-export type ListeningTestSection = {
-  sectionNumber: number;
-  audioUrl?: string | null;
-  mapUrl?: string | null;
-  mapCaption?: string;
-  questions: ListeningQuestion[];
-};
-
-export type ReadingTestSection = {
-  sectionNumber: number;
-  passage: string;
-  pdfUrl?: string | null;
-  questions: ReadingQuestion[];
-};
-
-export type FullMockSection = { type: "speaking" | "listening" | "reading" | "writing"; testId: string; sectionIndex?: number };
 
 export const fullMockTests = pgTable("full_mock_tests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -166,23 +198,6 @@ export const fullMockTests = pgTable("full_mock_tests", {
   totalDuration: integer("total_duration").notNull().default(0),
 });
 
-export type ListeningQuestion = {
-  id: number;
-  question: string;
-  options: string[];
-  correctAnswer: number | string;
-  type?: "mcq" | "tfng" | "ynng" | "completion" | "short-answer" | "matching";
-  imageUrl?: string | null;
-  imageCaption?: string;
-};
-
-export type ReadingQuestion = {
-  id: number;
-  question: string;
-  options: string[];
-  correctAnswer: number | string;
-  type?: "mcq" | "tfng" | "ynng" | "completion" | "short-answer" | "matching";
-};
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -228,6 +243,11 @@ export const insertNoteSchema = createInsertSchema(notes).omit({
   createdAt: true,
 });
 
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type SpeakingTest = typeof speakingTests.$inferSelect;
@@ -244,6 +264,8 @@ export type TestResult = typeof testResults.$inferSelect;
 export type InsertTestResult = z.infer<typeof insertTestResultSchema>;
 export type Note = typeof notes.$inferSelect;
 export type InsertNote = z.infer<typeof insertNoteSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 
 export const insertFullMockTestSchema = createInsertSchema(fullMockTests).omit({ id: true });
 export type FullMockTest = typeof fullMockTests.$inferSelect;
@@ -261,6 +283,6 @@ export const insertOnlineLessonQuestionSchema = createInsertSchema(onlineLessonQ
 export type OnlineLessonQuestion = typeof onlineLessonQuestions.$inferSelect;
 export type InsertOnlineLessonQuestion = z.infer<typeof insertOnlineLessonQuestionSchema>;
 
-export const insertOnlineLessonResultSchema = createInsertSchema(onlineLessonResults).omit({ id: true, submittedAt: true });
+export const insertOnlineLessonResultSchema = createInsertSchema(onlineLessonResults, { timedOut: z.boolean() }).omit({ id: true, submittedAt: true });
 export type OnlineLessonResult = typeof onlineLessonResults.$inferSelect;
 export type InsertOnlineLessonResult = z.infer<typeof insertOnlineLessonResultSchema>;

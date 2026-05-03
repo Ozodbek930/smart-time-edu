@@ -5,6 +5,7 @@ import { Loader2, CheckCircle2, XCircle, Headphones, BookOpen, PenTool, Mic, Hom
 import type { TestResult } from "@shared/schema";
 import { bandToCEFR, CEFR_COLORS, CEFR_DESCRIPTORS } from "@/lib/testModeConfig";
 import { useModeStore } from "@/lib/useModeStore";
+import { rawToIELTSBand, ieltsToCEFR, calculateOverallBand } from "@/lib/scoring";
 
 interface Question {
   id: number;
@@ -272,13 +273,21 @@ export default function FullMockResults() {
   }, {});
 
   const sectionOrder = fullMock.sections.map(s => s.type);
-  const uniqueTypes = [...new Set(sectionOrder)];
+  const uniqueTypes = Array.from(new Set(sectionOrder));
 
   const scoredSections = ["listening", "reading"] as const;
   const totalScore = scoredSections.reduce((sum, t) => sum + (resultByType[t]?.score ?? 0), 0);
   const totalQs = scoredSections.reduce((sum, t) => sum + (resultByType[t]?.totalQuestions ?? 0), 0);
-  const overallBand = totalQs > 0 ? ((totalScore / totalQs) * 9).toFixed(1) : "—";
-  const overallCEFR = overallBand !== "—" ? bandToCEFR(overallBand) : null;
+
+  const sectionsBands = uniqueTypes.map(type => {
+    const res = resultByType[type];
+    if (!res) return null;
+    if (type === "writing" || type === "speaking") return res.bandScoreIELTS;
+    return rawToIELTSBand(res.score ?? 0, res.totalQuestions || 40);
+  });
+
+  const overallBand = calculateOverallBand(sectionsBands);
+  const overallCEFR = overallBand !== "0.0" && overallBand !== "0" ? ieltsToCEFR(overallBand) : null;
   const showCEFR = mode === "CEFR" || mode === "BOTH";
   const showBand = mode === "IELTS" || mode === "BOTH";
 
@@ -359,18 +368,26 @@ export default function FullMockResults() {
               </p>
             </div>
             <div className="hidden sm:grid grid-cols-2 gap-3 shrink-0">
-              {(["listening", "reading"] as const).map(type => {
-                const res = resultByType[type];
-                if (!res) return null;
-                const cfg = SECTION_CONFIG[type];
-                return (
-                  <div key={type} className={`text-center px-4 py-3 rounded-xl border ${cfg.border} ${cfg.bg}`}>
-                    <cfg.icon className={`w-4 h-4 mx-auto mb-1 ${cfg.color}`} />
-                    <p className={`text-lg font-bold ${cfg.color}`}>{res.score ?? 0}/{res.totalQuestions ?? 0}</p>
-                    <p className="text-xs text-gray-500">{cfg.label}</p>
-                  </div>
-                );
-              })}
+               {uniqueTypes.map(type => {
+                 const res = resultByType[type];
+                 if (!res) return null;
+                 const cfg = SECTION_CONFIG[type as keyof typeof SECTION_CONFIG];
+                 const band = (type === "writing" || type === "speaking")
+                   ? res.bandScoreIELTS
+                   : rawToIELTSBand(res.score ?? 0, res.totalQuestions || 40);
+
+                 return (
+                   <div key={type} className={`text-center px-4 py-2 rounded-xl border ${cfg.border} ${cfg.bg}`}>
+                     <div className="flex items-center gap-2 mb-1 justify-center">
+                        <cfg.icon className={`w-3 h-3 ${cfg.color}`} />
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">{cfg.label}</span>
+                     </div>
+                     <p className={`text-sm font-black ${cfg.color}`}>
+                       {band ? `IELTS ${band}` : "Grading…"}
+                     </p>
+                   </div>
+                 );
+               })}
             </div>
           </div>
         </div>
@@ -409,16 +426,12 @@ export default function FullMockResults() {
                 >
                   <Icon className="w-4 h-4" />
                   {tab.cfg.label}
-                  {hasResult && tab.type !== "writing" && tab.type !== "speaking" && tab.res && (
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${tab.cfg.badge}`}>
-                      {tab.res.score}/{tab.res.totalQuestions}
+                  {hasResult && tab.res && (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${tab.cfg.badge}`}>
+                      {tab.type === "writing" || tab.type === "speaking"
+                        ? (tab.res.bandScoreIELTS ? `Band ${tab.res.bandScoreIELTS}` : "Reviewing")
+                        : `Band ${rawToIELTSBand(tab.res.score ?? 0, tab.res.totalQuestions || 40)}`}
                     </span>
-                  )}
-                  {hasResult && tab.type === "writing" && (
-                    <span className="text-xs px-1.5 py-0.5 rounded-full font-bold bg-purple-100 text-purple-700">✓</span>
-                  )}
-                  {hasResult && tab.type === "speaking" && (
-                    <span className="text-xs px-1.5 py-0.5 rounded-full font-bold bg-rose-100 text-rose-700">✓</span>
                   )}
                 </button>
               );

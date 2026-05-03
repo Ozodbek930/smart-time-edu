@@ -564,42 +564,65 @@ function MockReadingQuiz({
 function MapViewer({ mapUrl, mapCaption }: { mapUrl: string; mapCaption?: string }) {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [height, setHeight] = useState(320); // Standart balandlik oshirildi
+  const [scale, setScale] = useState(1);
 
   return (
     <>
-      <div className="rounded-xl border-2 border-blue-200 bg-blue-50/50 overflow-hidden">
+      <div className="rounded-xl border-2 border-blue-200 bg-blue-50/50 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
         <div
           className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-blue-100/60 transition-colors cursor-pointer"
           onClick={() => setCollapsed(c => !c)}
         >
           <div className="flex items-center gap-2 text-sm font-semibold text-blue-800">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
             Map / Diagram
-            {mapCaption && <span className="font-normal text-blue-600 truncate max-w-[200px]">{mapCaption}</span>}
+            {mapCaption && <span className="font-normal text-blue-600 truncate max-w-[150px]">— {mapCaption}</span>}
           </div>
-          <div className="flex items-center gap-2">
-            <span
-              role="button"
-              tabIndex={0}
+          <div className="flex items-center gap-3">
+            {!collapsed && (
+              <div className="flex items-center gap-2 pr-2 border-r border-blue-200">
+                <span className="text-[10px] text-blue-400 font-bold uppercase tracking-tight">Size</span>
+                <input 
+                  type="range" min="200" max="800" step="10"
+                  value={height} 
+                  onChange={(e) => { e.stopPropagation(); setHeight(parseInt(e.target.value)); }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-16 h-1.5 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+              </div>
+            )}
+            <button
               onClick={(e) => { e.stopPropagation(); setOpen(true); }}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setOpen(true); } }}
-              className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded-md hover:bg-blue-200 transition-colors"
+              className="p-1 hover:bg-blue-200 rounded transition-colors text-blue-600"
+              title="Full screen"
             >
-              Full screen
-            </span>
-            <svg className={`w-4 h-4 text-blue-500 transition-transform ${collapsed ? "-rotate-90" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+            </button>
+            <svg className={`w-4 h-4 text-blue-500 transition-transform duration-300 ${collapsed ? "-rotate-90" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
           </div>
         </div>
         {!collapsed && (
           <div
-            className="px-3 pb-3 cursor-zoom-in"
+            className="px-3 pb-3 cursor-zoom-in group"
             onClick={() => setOpen(true)}
           >
-            <img
-              src={mapUrl}
-              alt={mapCaption || "Map"}
-              className="w-full rounded-lg border border-blue-200 object-contain max-h-64 bg-white"
-            />
+            <div 
+              className="relative rounded-lg border border-blue-200 bg-white overflow-hidden transition-all duration-200"
+              style={{ height: `${height}px` }}
+            >
+              <img
+                src={mapUrl}
+                alt={mapCaption || "Map"}
+                className="w-full h-full object-contain"
+              />
+              <div className="absolute inset-0 bg-blue-600/0 group-hover:bg-blue-600/5 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                 <span className="bg-white/90 px-3 py-1.5 rounded-full text-xs font-bold text-blue-800 shadow-sm border border-blue-100 flex items-center gap-1.5">
+                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
+                   Click to Expand
+                 </span>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -607,25 +630,61 @@ function MapViewer({ mapUrl, mapCaption }: { mapUrl: string; mapCaption?: string
       {/* Full-screen lightbox */}
       {open && (
         <div
-          className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[9999] bg-black/95 flex flex-col p-4 animate-in fade-in duration-200"
           onClick={() => setOpen(false)}
         >
-          <div className="relative max-w-5xl max-h-full w-full" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between px-4 py-2 text-white shrink-0">
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-bold tracking-wide uppercase text-blue-400">Map View</span>
+              <div className="flex items-center gap-1.5 bg-white/10 p-1 rounded-lg">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setScale(s => Math.max(0.5, s - 0.2)); }}
+                  className="p-1 hover:bg-white/20 rounded-md transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" /></svg>
+                </button>
+                <span className="text-[10px] font-mono w-10 text-center font-bold">{(scale * 100).toFixed(0)}%</span>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setScale(s => Math.min(3, s + 0.2)); }}
+                  className="p-1 hover:bg-white/20 rounded-md transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setScale(1); }}
+                  className="ml-1 px-2 py-1 text-[10px] bg-blue-600 hover:bg-blue-700 rounded font-bold transition-colors uppercase"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
             <button
               onClick={() => setOpen(false)}
-              className="absolute -top-10 right-0 text-white/80 hover:text-white text-sm flex items-center gap-1"
+              className="flex items-center gap-2 px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-xs font-bold transition-colors shadow-lg"
             >
-              <X className="w-5 h-5" /> Close
+              <X className="w-4 h-4" /> Close
             </button>
-            <img
-              src={mapUrl}
-              alt={mapCaption || "Map"}
-              className="w-full max-h-[85vh] object-contain rounded-lg"
-            />
-            {mapCaption && (
-              <p className="text-center text-white/70 text-sm mt-3 italic">{mapCaption}</p>
-            )}
           </div>
+
+          <div className="flex-1 relative overflow-auto flex items-center justify-center p-8 bg-black/20 rounded-2xl border border-white/5 my-2">
+            <div 
+              className="transition-transform duration-200 ease-out" 
+              style={{ transform: `scale(${scale})` }}
+              onClick={e => e.stopPropagation()}
+            >
+              <img
+                src={mapUrl}
+                alt={mapCaption || "Map"}
+                className="max-w-none shadow-2xl rounded-sm"
+              />
+            </div>
+          </div>
+          
+          {mapCaption && (
+            <div className="bg-white/10 backdrop-blur-md px-6 py-2.5 rounded-full mx-auto border border-white/10 text-white/90 text-sm font-medium shadow-2xl">
+              {mapCaption}
+            </div>
+          )}
         </div>
       )}
     </>
@@ -638,7 +697,7 @@ function MapViewer({ mapUrl, mapCaption }: { mapUrl: string; mapCaption?: string
 
 function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, submitRef, fullmockId }: {
   test: ListeningTest;
-  onSubmitted: () => void;
+  onSubmitted: (autoNext?: boolean) => void;
   initialSeconds?: number;
   onTimerChange?: (remaining: number) => void;
   submitRef?: MutableRefObject<(() => void) | null>;
@@ -648,25 +707,38 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
   const [answers, setAnswers] = useState<Record<number, number | string>>({});
   const [timerDone, setTimerDone] = useState(false);
 
+  const submitMutation = useMutation({
+    mutationFn: async () => {
+      const allQs = (test.testSections?.length > 0 ? test.testSections : [{ questions: test.questions || [] }])
+        .flatMap((s: any) => ((s.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]))
+        .filter((q: any) => (q.type as string) !== "text");
+      
+      const correct = allQs.filter((q: any) => {
+        const ans = answers[q.id];
+        if (q.correctAnswer !== undefined && q.correctAnswer !== null) return String(ans) === String(q.correctAnswer);
+        if (q.correctText) return String(ans || "").trim().toLowerCase() === String(q.correctText).trim().toLowerCase();
+        return false;
+      }).length;
+
+      await apiRequest("POST", "/api/test-results", {
+        testType: "listening",
+        testId: test.id,
+        fullmockId: fullmockId ?? null,
+        score: correct,
+        totalQuestions: allQs.length,
+        answers,
+      });
+    },
+    onSuccess: () => { onSubmitted(timerDone); },
+    onError: () => { toast({ title: "Error saving answers. Please try again.", variant: "destructive" }); },
+  });
+
   const timer = useCountdownTimer(test.duration, () => {
     setTimerDone(true);
     submitMutation.mutate();
   }, !timerDone, initialSeconds);
 
   useEffect(() => { onTimerChange?.(timer.secondsLeft); }, [timer.secondsLeft]);
-
-  const submitMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("POST", "/api/test-results", {
-        testType: "listening",
-        testId: test.id,
-        fullmockId: fullmockId ?? null,
-        answers,
-      });
-    },
-    onSuccess: () => { onSubmitted(); },
-    onError: () => { toast({ title: "Error saving answers. Please try again.", variant: "destructive" }); },
-  });
 
   const mode = (test.mode as string) || "test";
   const [writtenText, setWrittenText] = useState("");
@@ -859,7 +931,7 @@ function ListeningSectionExam({ test, onSubmitted, initialSeconds, onTimerChange
 
 function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, submitRef, fullmockId }: {
   test: ReadingTest;
-  onSubmitted: () => void;
+  onSubmitted: (autoNext?: boolean) => void;
   initialSeconds?: number;
   onTimerChange?: (remaining: number) => void;
   submitRef?: MutableRefObject<(() => void) | null>;
@@ -870,25 +942,38 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, 
   const [answers, setAnswers] = useState<Record<number, number | string>>({});
   const [timerDone, setTimerDone] = useState(false);
 
+  const submitMutation = useMutation({
+    mutationFn: async () => {
+      const allQs = (test.testSections?.length > 0 ? test.testSections : [{ questions: test.questions || [] }])
+        .flatMap((s: any) => ((s.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]))
+        .filter((q: any) => (q.type as string) !== "text");
+      
+      const correct = allQs.filter((q: any) => {
+        const ans = answers[q.id];
+        if (q.correctAnswer !== undefined && q.correctAnswer !== null) return String(ans) === String(q.correctAnswer);
+        if (q.correctText) return String(ans || "").trim().toLowerCase() === String(q.correctText).trim().toLowerCase();
+        return false;
+      }).length;
+
+      await apiRequest("POST", "/api/test-results", {
+        testType: "reading",
+        testId: test.id,
+        fullmockId: fullmockId ?? null,
+        score: correct,
+        totalQuestions: allQs.length,
+        answers,
+      });
+    },
+    onSuccess: () => { onSubmitted(timerDone); },
+    onError: () => { toast({ title: "Error saving answers. Please try again.", variant: "destructive" }); },
+  });
+
   const timer = useCountdownTimer(test.duration, () => {
     setTimerDone(true);
     submitMutation.mutate();
   }, !timerDone, initialSeconds);
 
   useEffect(() => { onTimerChange?.(timer.secondsLeft); }, [timer.secondsLeft]);
-
-  const submitMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("POST", "/api/test-results", {
-        testType: "reading",
-        testId: test.id,
-        fullmockId: fullmockId ?? null,
-        answers,
-      });
-    },
-    onSuccess: () => { onSubmitted(); },
-    onError: () => { toast({ title: "Error saving answers. Please try again.", variant: "destructive" }); },
-  });
 
   const handleManualSubmit = () => {
     if (!window.confirm("Are you sure you want to submit this section? You cannot go back.")) return;
@@ -1031,7 +1116,7 @@ function ReadingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, 
 
 function WritingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, submitRef, fullmockId }: {
   test: WritingTest;
-  onSubmitted: () => void;
+  onSubmitted: (autoNext?: boolean) => void;
   initialSeconds?: number;
   onTimerChange?: (remaining: number) => void;
   submitRef?: MutableRefObject<(() => void) | null>;
@@ -1059,7 +1144,7 @@ function WritingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange, 
         answers: { response },
       });
     },
-    onSuccess: () => { onSubmitted(); },
+    onSuccess: () => { onSubmitted(timerDone); },
     onError: () => { toast({ title: "Error saving essay. Please try again.", variant: "destructive" }); },
   });
 
@@ -1376,7 +1461,7 @@ function SpeakingSectionExam({ test, onSubmitted, initialSeconds, onTimerChange,
 
 function MultiListeningSectionExam({ tests, onSubmitted, onTimerChange, submitRef, fullmockId, initialSeconds }: {
   tests: ListeningTest[];
-  onSubmitted: () => void;
+  onSubmitted: (autoNext?: boolean) => void;
   onTimerChange?: (remaining: number) => void;
   submitRef?: MutableRefObject<(() => void) | null>;
   fullmockId?: string;
@@ -1387,27 +1472,41 @@ function MultiListeningSectionExam({ tests, onSubmitted, onTimerChange, submitRe
   const [answersByTest, setAnswersByTest] = useState<Record<string, Record<number, number | string>>>({});
   const [timerDone, setTimerDone] = useState(false);
 
+  const submitMutation = useMutation({
+    mutationFn: async () => {
+      for (const test of tests) {
+        const allQs = (test.testSections?.length > 0 ? test.testSections : [{ questions: test.questions || [] }])
+          .flatMap((s: any) => ((s.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]))
+          .filter((q: any) => (q.type as string) !== "text");
+        
+        const testAnswers = answersByTest[test.id] ?? {};
+        const correct = allQs.filter((q: any) => {
+          const ans = testAnswers[q.id];
+          if (q.correctAnswer !== undefined && q.correctAnswer !== null) return String(ans) === String(q.correctAnswer);
+          if (q.correctText) return String(ans || "").trim().toLowerCase() === String(q.correctText).trim().toLowerCase();
+          return false;
+        }).length;
+
+        await apiRequest("POST", "/api/test-results", {
+          testType: "listening",
+          testId: test.id,
+          fullmockId: fullmockId ?? null,
+          score: correct,
+          totalQuestions: allQs.length,
+          answers: testAnswers,
+        });
+      }
+    },
+    onSuccess: () => onSubmitted(timerDone),
+    onError: () => toast({ title: "Error saving answers. Please try again.", variant: "destructive" }),
+  });
+
   const timer = useCountdownTimer(totalDuration, () => {
     setTimerDone(true);
     submitMutation.mutate();
   }, !timerDone, initialSeconds);
 
   useEffect(() => { onTimerChange?.(timer.secondsLeft); }, [timer.secondsLeft]);
-
-  const submitMutation = useMutation({
-    mutationFn: async () => {
-      for (const test of tests) {
-        await apiRequest("POST", "/api/test-results", {
-          testType: "listening",
-          testId: test.id,
-          fullmockId: fullmockId ?? null,
-          answers: answersByTest[test.id] ?? {},
-        });
-      }
-    },
-    onSuccess: () => onSubmitted(),
-    onError: () => toast({ title: "Error saving answers. Please try again.", variant: "destructive" }),
-  });
 
   const handleManualSubmit = () => {
     if (!window.confirm("Submit all listening sections? You cannot go back.")) return;
@@ -1521,7 +1620,7 @@ function MultiListeningSectionExam({ tests, onSubmitted, onTimerChange, submitRe
 
 function MultiReadingSectionExam({ tests, onSubmitted, onTimerChange, submitRef, fullmockId, initialSeconds }: {
   tests: ReadingTest[];
-  onSubmitted: () => void;
+  onSubmitted: (autoNext?: boolean) => void;
   onTimerChange?: (remaining: number) => void;
   submitRef?: MutableRefObject<(() => void) | null>;
   fullmockId?: string;
@@ -1542,15 +1641,29 @@ function MultiReadingSectionExam({ tests, onSubmitted, onTimerChange, submitRef,
   const submitMutation = useMutation({
     mutationFn: async () => {
       for (const test of tests) {
+        const allQs = (test.testSections?.length > 0 ? test.testSections : [{ questions: test.questions || [] }])
+          .flatMap((s: any) => ((s.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]))
+          .filter((q: any) => (q.type as string) !== "text");
+        
+        const testAnswers = answersByTest[test.id] ?? {};
+        const correct = allQs.filter((q: any) => {
+          const ans = testAnswers[q.id];
+          if (q.correctAnswer !== undefined && q.correctAnswer !== null) return String(ans) === String(q.correctAnswer);
+          if (q.correctText) return String(ans || "").trim().toLowerCase() === String(q.correctText).trim().toLowerCase();
+          return false;
+        }).length;
+
         await apiRequest("POST", "/api/test-results", {
           testType: "reading",
           testId: test.id,
           fullmockId: fullmockId ?? null,
-          answers: answersByTest[test.id] ?? {},
+          score: correct,
+          totalQuestions: allQs.length,
+          answers: testAnswers,
         });
       }
     },
-    onSuccess: () => onSubmitted(),
+    onSuccess: () => onSubmitted(timerDone),
     onError: () => toast({ title: "Error saving answers. Please try again.", variant: "destructive" }),
   });
 
@@ -1674,6 +1787,7 @@ export function FullMockSection() {
   const [isTimerCritical, setIsTimerCritical] = useState(false);
   const [isTimerWarning, setIsTimerWarning] = useState(false);
   const [submitPending, setSubmitPending] = useState(false);
+  const { toast } = useToast();
   const sectionSubmitRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -1761,11 +1875,15 @@ export function FullMockSection() {
     setLocation(`/fullmock/${id}/section/${targetStep}`);
   };
 
-  const handleSectionSubmitted = () => {
+  const handleSectionSubmitted = (autoNext = false) => {
     const prog = getProgress(id ?? "");
     const newCompleted = [...new Set([...prog.completed, step])];
     saveProgress(id ?? "", step + 1, newCompleted);
-    setSectionDone(true);
+    if (autoNext && !isLastStep) {
+      navigateTo(step + 1, true);
+    } else {
+      setSectionDone(true);
+    }
   };
 
   const handleFinish = () => {
@@ -1971,9 +2089,9 @@ export function FullMockSection() {
                 fullmockId={id}
               />
             )}
-            {currentGroup.type === "speaking" && currentGroup.sections[0]?.testData && (
-              <SpeakingSectionExam
-                test={currentGroup.sections[0].testData as SpeakingTest}
+            {currentGroup.type === "speaking" && (
+              <SpeakingAIOSection
+                parts={currentGroup.sections.filter(s => s.testData).map(s => s.testData as SpeakingTest)}
                 onSubmitted={handleSectionSubmitted}
                 fullmockId={id}
               />
@@ -1989,7 +2107,7 @@ export function FullMockSection() {
             <div className="space-y-4">
               <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto" />
               <p className="text-muted-foreground">No test data found for this section.</p>
-              <Button onClick={handleSectionSubmitted} data-testid="button-skip-section">Skip Section</Button>
+              <Button onClick={() => handleSectionSubmitted()} data-testid="button-skip-section">Skip Section</Button>
             </div>
           </motion.div>
         )}
@@ -2005,6 +2123,7 @@ export function FullMockSection() {
 
 type SpeakingPhase =
   | { type: "start" }
+  | { type: "mic_check" }
   | { type: "warmup" }
   | { type: "part_active"; partIdx: number }
   | { type: "part_prep"; partIdx: number }
@@ -2071,6 +2190,67 @@ function PartTimer({ seconds, onWarning, onDone }: {
   );
 }
 
+function MicCheckTool({ onDone }: { onDone: () => void }) {
+  const { isRecording, audioUrl, duration, startRecording, stopRecording, reset } = useAudioRecorder();
+  const [step, setStep] = useState<"idle" | "recording" | "review">("idle");
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const handleStart = () => {
+    setStep("recording");
+    startRecording();
+    let count = 0;
+    timerRef.current = setInterval(() => {
+      count++;
+      if (count >= 3) {
+        clearInterval(timerRef.current!);
+        stopRecording();
+        setStep("review");
+      }
+    }, 1000);
+  };
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center gap-4 w-full max-w-sm">
+      {step === "idle" && (
+        <Button onClick={handleStart} className="w-full gap-2 bg-blue-600 hover:bg-blue-700">
+          <Mic className="w-4 h-4" /> Start Test Recording
+        </Button>
+      )}
+
+      {step === "recording" && (
+        <div className="flex flex-col items-center gap-3 p-6 bg-rose-50 rounded-2xl border-2 border-rose-200 w-full">
+          <motion.div className="w-4 h-4 rounded-full bg-red-500" animate={{ scale: [1, 1.5, 1] }} transition={{ duration: 0.6, repeat: Infinity }} />
+          <p className="text-sm font-bold text-rose-600">Recording... {3 - duration}s</p>
+          <div className="w-full bg-rose-200 h-1.5 rounded-full overflow-hidden">
+            <motion.div className="bg-red-500 h-full" initial={{ width: 0 }} animate={{ width: `${(duration / 3) * 100}%` }} transition={{ duration: 1, ease: "linear" }} />
+          </div>
+        </div>
+      )}
+
+      {step === "review" && (
+        <div className="flex flex-col items-center gap-4 w-full">
+          <div className="p-4 bg-green-50 rounded-xl border border-green-200 w-full space-y-3">
+            <p className="text-xs font-semibold text-green-700 text-center uppercase tracking-wide">Test Recording Playback</p>
+            {audioUrl && <audio controls src={audioUrl} className="w-full h-10" />}
+          </div>
+          <div className="flex gap-2 w-full">
+            <Button variant="outline" onClick={() => { reset(); setStep("idle"); }} className="flex-1 gap-2">
+              <RotateCcw className="w-4 h-4" /> Retest
+            </Button>
+            <Button onClick={onDone} className="flex-1 gap-2 bg-green-600 hover:bg-green-700">
+              <CheckCircle className="w-4 h-4" /> Everything works!
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SpeakingCountdown({ seconds, label, onDone, color = "blue" }: {
   seconds: number;
   label: string;
@@ -2131,9 +2311,11 @@ function SpeakingCountdown({ seconds, label, onDone, color = "blue" }: {
   );
 }
 
-function SpeakingAIOSection({ parts, onPartRecorded }: {
+function SpeakingAIOSection({ parts, onPartRecorded, onSubmitted, fullmockId }: {
   parts: SpeakingTest[];
   onPartRecorded?: (partIdx: number, serverUrl: string) => void;
+  onSubmitted?: (autoNext?: boolean) => void;
+  fullmockId?: string;
 }) {
   const [phase, setPhase] = useState<SpeakingPhase>({ type: "start" });
   const { isRecording, audioBlob, audioUrl, duration: recDuration, error: recError, startRecording, stopRecording, reset: resetRec } = useAudioRecorder();
@@ -2151,7 +2333,10 @@ function SpeakingAIOSection({ parts, onPartRecorded }: {
   const goToPartPrep = (partIdx: number) => setPhase({ type: "part_prep", partIdx });
   const goNext = () => {
     if (phase.type !== "part_active") return;
-    if (isLastPart) { setPhase({ type: "done" }); }
+    if (isLastPart) { 
+      setPhase({ type: "done" }); 
+      if (onSubmitted) setTimeout(() => onSubmitted(true), 1500);
+    }
     else { goToPartPrep(phase.partIdx); }
   };
 
@@ -2178,11 +2363,26 @@ function SpeakingAIOSection({ parts, onPartRecorded }: {
     formData.append("recording", audioBlob, `speaking-aio-${partId}.${ext}`);
     fetch("/api/speaking/upload", { method: "POST", body: formData, credentials: "include" })
       .then(r => r.ok ? r.json() : Promise.reject("Upload failed"))
-      .then(({ url }: { url: string }) => {
+      .then(async ({ url }: { url: string }) => {
         setRecordings(prev => ({ ...prev, [partIdx]: url }));
         onPartRecorded?.(partIdx, url);
+        
+        // Auto-save result for this speaking part
+        try {
+          await apiRequest("POST", "/api/test-results", {
+            testType: "speaking",
+            testId: partId,
+            fullmockId: fullmockId ?? null,
+            answers: { recordingUrl: url }
+          });
+        } catch (e) {
+          console.error("Failed to save speaking result:", e);
+        }
       })
-      .catch(() => setUploadError("Не удалось загрузить запись. Попробуйте ещё раз."))
+      .catch((err) => {
+        console.error("Speaking upload error:", err);
+        setUploadError("Failed to upload recording. Please try again.");
+      })
       .finally(() => setUploading(false));
   }, [audioBlob]);
 
@@ -2202,12 +2402,28 @@ function SpeakingAIOSection({ parts, onPartRecorded }: {
           </ul>
         )}
         <button
-          onClick={() => warmupSec > 0 ? setPhase({ type: "warmup" }) : goToPartActive(0)}
+          onClick={() => setPhase({ type: "mic_check" })}
           className="flex items-center gap-2 px-8 py-3 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm transition-colors shadow-lg shadow-rose-200"
           data-testid="button-speaking-start"
         >
           <Mic className="w-4 h-4" /> Start Speaking Exam
         </button>
+      </div>
+    );
+  }
+
+  if (phase.type === "mic_check") {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-6 space-y-6">
+        <div className="w-16 h-16 rounded-full bg-blue-100 border-4 border-blue-300 flex items-center justify-center">
+          <Mic className="w-8 h-8 text-blue-600" />
+        </div>
+        <div className="text-center space-y-2">
+          <h3 className="text-lg font-bold text-gray-900">Check Your Microphone</h3>
+          <p className="text-sm text-gray-500 max-w-xs mx-auto">Please say something for 3 seconds to ensure your microphone is working correctly.</p>
+        </div>
+
+        <MicCheckTool onDone={() => setPhase(warmupSec > 0 ? { type: "warmup" } : { type: "part_active", partIdx: 0 })} />
       </div>
     );
   }
@@ -2613,66 +2829,75 @@ export function FullMockAllInOneExam() {
   };
   const answeredCount = allNavQs.filter(isQAnswered).length;
 
-  const submitAll = async () => {
-    setSubmitted(true);
-    let anyError = false;
-    for (let i = 0; i < activeSections.length; i++) {
-      const sec = activeSections[i];
-      if (!sec.testData) continue;
-      try {
-        if (sec.type === "listening" || sec.type === "reading") {
-          const td = sec.testData as any;
-          const qs = (td.testSections?.length > 0 ? td.testSections : [{ questions: td.questions || [] }])
-            .flatMap((s: any) => ((s.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]))
-            .filter((q: any) => q.type !== "text");
-          const correct = qs.filter((q: any) => {
-            const ans = sectionAnswers[i]?.[q.id];
-            if (q.correctAnswer !== undefined) return parseInt(ans as string) === q.correctAnswer;
-            if (q.correctText) return (ans as string)?.trim().toLowerCase() === q.correctText.toLowerCase();
-            return false;
-          }).length;
-          await apiRequest("POST", "/api/test-results", {
-            testType: sec.type,
-            testId: sec.testId,
-            fullmockId: id,
-            score: correct,
-            totalQuestions: qs.length,
-            answers: Object.fromEntries(Object.entries(sectionAnswers[i] || {}).map(([k, v]) => [k, v])),
-          });
-        } else if (sec.type === "writing") {
-          await apiRequest("POST", "/api/test-results", {
-            testType: "writing",
-            testId: sec.testId,
-            fullmockId: id,
-            answers: { response: writingResponses[i] || "" },
-          });
-        } else if (sec.type === "speaking") {
-          // Find which speaking part index this section corresponds to
-          const speakingSecIdx = activeSections.filter(s => s.type === "speaking").indexOf(sec);
-          const recordingUrl = speakingRecordings[speakingSecIdx] ?? null;
-          await apiRequest("POST", "/api/test-results", {
-            testType: "speaking",
-            testId: sec.testId,
-            fullmockId: id,
-            answers: recordingUrl ? { recordingUrl } : {},
-          });
-        }
-      } catch {
-        anyError = true;
-      }
-    }
-    if (anyError) {
-      toast({ title: "Some sections couldn't be saved", variant: "destructive" });
-    } else {
-      toast({ title: "Exam submitted!", description: `${answeredCount}/${allNavQs.length} questions answered` });
-    }
-  };
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const submitMutation = useMutation({
-    mutationFn: submitAll,
+    mutationFn: async () => {
+      setIsSubmitting(true);
+      setSubmitted(true);
+      let anyError = false;
+      let errorSections: string[] = [];
+      
+      for (let i = 0; i < activeSections.length; i++) {
+        const sec = activeSections[i];
+        if (!sec.testData) continue;
+        
+        try {
+          console.log(`Submitting section ${i}: ${sec.type}`);
+          if (sec.type === "listening" || sec.type === "reading") {
+            const td = sec.testData as any;
+            const qs = (td.testSections?.length > 0 ? td.testSections : [{ questions: td.questions || [] }])
+              .flatMap((s: any) => ((s.questions as any[]) || []).flatMap((q: any) => Array.isArray(q) ? q : [q]))
+              .filter((q: any) => (q.type as string) !== "text");
+            
+            const correct = qs.filter((q: any) => {
+              const ans = sectionAnswers[i]?.[q.id];
+              if (q.correctAnswer !== undefined && q.correctAnswer !== null) return String(ans) === String(q.correctAnswer);
+              if (q.correctText) return String(ans || "").trim().toLowerCase() === String(q.correctText).trim().toLowerCase();
+              return false;
+            }).length;
+
+            await apiRequest("POST", "/api/test-results", {
+              testType: sec.type,
+              testId: sec.testId,
+              fullmockId: id,
+              score: correct,
+              totalQuestions: qs.length,
+              answers: sectionAnswers[i] || {},
+            });
+          } else if (sec.type === "writing") {
+            await apiRequest("POST", "/api/test-results", {
+              testType: "writing",
+              testId: sec.testId,
+              fullmockId: id,
+              answers: { response: writingResponses[i] || "" },
+            });
+          }
+        } catch (err) {
+          console.error(`Error submitting ${sec.type} section:`, err);
+          anyError = true;
+          errorSections.push(sec.type);
+        }
+      }
+      
+      if (anyError) {
+        throw new Error(`Failed to save: ${errorSections.join(", ")}`);
+      }
+    },
     onSuccess: () => {
+      setIsSubmitting(false);
+      toast({ title: "Exam submitted successfully!" });
       setTimeout(() => setLocation(`/fullmock/${id}/results`), 1500);
     },
+    onError: (err: any) => {
+      setIsSubmitting(false);
+      setSubmitted(false);
+      toast({ 
+        title: "Submission failed", 
+        description: err.message || "Please check your internet connection and try again.",
+        variant: "destructive" 
+      });
+    }
   });
 
   const scrollToSection = (secIdx: number) => {
@@ -2716,7 +2941,7 @@ export function FullMockAllInOneExam() {
         {/* Brand */}
         <div className="shrink-0 flex flex-col min-w-0 leading-tight mr-1">
           <span className="font-bold text-sm text-gray-900 tracking-tight">SMART TIME</span>
-          <span className="text-[9px] text-gray-400 uppercase tracking-widest">Education</span>
+          <span className="text-xs scale-[0.75] origin-left text-gray-400 uppercase tracking-widest -mr-4">Education</span>
         </div>
 
         {/* Section anchor tabs */}
@@ -2746,7 +2971,7 @@ export function FullMockAllInOneExam() {
         {/* Timer + A- A+ + Submit + Exit */}
         <div className="flex items-center gap-1.5 shrink-0">
           <div className={`font-mono text-sm font-bold px-2 py-1 rounded ${isTimerCritical ? "text-red-600 bg-red-50" : isTimerWarning ? "text-amber-600 bg-amber-50" : "text-gray-800 bg-gray-100"}`} data-testid="aio-timer">
-            {timer.display}
+            {timer.formattedTime}
           </div>
           <button
             onClick={() => setZoom(z => Math.max(0.7, parseFloat((z - 0.1).toFixed(1))))}

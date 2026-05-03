@@ -31,46 +31,126 @@ function DifficultyBadge({ difficulty }: { difficulty: string }) {
 function MapViewer({ mapUrl, mapCaption }: { mapUrl: string; mapCaption?: string }) {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [height, setHeight] = useState(320);
+  const [scale, setScale] = useState(1);
+
   return (
     <>
-      <div className="rounded-xl border-2 border-blue-200 bg-blue-50/50 overflow-hidden">
+      <div className="rounded-xl border-2 border-blue-200 bg-blue-50/50 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
         <div
           className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-blue-100/60 transition-colors cursor-pointer"
           onClick={() => setCollapsed(c => !c)}
         >
           <div className="flex items-center gap-2 text-sm font-semibold text-blue-800">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
             Map / Diagram
-            {mapCaption && <span className="font-normal text-blue-600 truncate max-w-[200px]">{mapCaption}</span>}
+            {mapCaption && <span className="font-normal text-blue-600 truncate max-w-[150px]">— {mapCaption}</span>}
           </div>
-          <div className="flex items-center gap-2">
-            <span
-              role="button"
-              tabIndex={0}
+          <div className="flex items-center gap-3">
+            {!collapsed && (
+              <div className="flex items-center gap-2 pr-2 border-r border-blue-200">
+                <span className="text-[10px] text-blue-400 font-bold uppercase tracking-tight">Size</span>
+                <input 
+                  type="range" min="150" max="800" step="10"
+                  value={height} 
+                  onChange={(e) => { e.stopPropagation(); setHeight(parseInt(e.target.value)); }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-16 h-1.5 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+              </div>
+            )}
+            <button
               onClick={(e) => { e.stopPropagation(); setOpen(true); }}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setOpen(true); } }}
-              className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded-md hover:bg-blue-200 transition-colors"
+              className="p-1 hover:bg-blue-200 rounded transition-colors text-blue-600"
+              title="Full screen"
             >
-              Full screen
-            </span>
-            <svg className={`w-4 h-4 text-blue-500 transition-transform ${collapsed ? "-rotate-90" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+            </button>
+            <svg className={`w-4 h-4 text-blue-500 transition-transform duration-300 ${collapsed ? "-rotate-90" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
           </div>
         </div>
         {!collapsed && (
-          <div className="px-3 pb-3 cursor-zoom-in" onClick={() => setOpen(true)}>
-            <img src={mapUrl} alt={mapCaption || "Map"} className="w-full rounded-lg border border-blue-200 object-contain max-h-64 bg-white" />
+          <div
+            className="px-3 pb-3 cursor-zoom-in group"
+            onClick={() => setOpen(true)}
+          >
+            <div 
+              className="relative rounded-lg border border-blue-200 bg-white overflow-hidden transition-all duration-200"
+              style={{ height: `${height}px` }}
+            >
+              <img
+                src={mapUrl}
+                alt={mapCaption || "Map"}
+                className="w-full h-full object-contain"
+              />
+              <div className="absolute inset-0 bg-blue-600/0 group-hover:bg-blue-600/5 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                 <span className="bg-white/90 px-3 py-1.5 rounded-full text-xs font-bold text-blue-800 shadow-sm border border-blue-100 flex items-center gap-1.5">
+                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
+                   Click to Expand
+                 </span>
+              </div>
+            </div>
           </div>
         )}
       </div>
+
       {open && (
-        <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4" onClick={() => setOpen(false)}>
-          <div className="relative max-w-5xl max-h-full w-full" onClick={e => e.stopPropagation()}>
-            <button type="button" onClick={() => setOpen(false)} className="absolute -top-10 right-0 text-white/80 hover:text-white text-sm flex items-center gap-1">
-              <X className="w-5 h-5" /> Close
+        <div
+          className="fixed inset-0 z-[9999] bg-black/95 flex flex-col p-4 animate-in fade-in duration-200"
+          onClick={() => setOpen(false)}
+        >
+          <div className="flex items-center justify-between px-4 py-2 text-white shrink-0">
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-bold tracking-wide uppercase text-blue-400">Map View</span>
+              <div className="flex items-center gap-1.5 bg-white/10 p-1 rounded-lg">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setScale(s => Math.max(0.5, s - 0.2)); }}
+                  className="p-1 hover:bg-white/20 rounded-md transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" /></svg>
+                </button>
+                <span className="text-[10px] font-mono w-10 text-center font-bold">{(scale * 100).toFixed(0)}%</span>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setScale(s => Math.min(3, s + 0.2)); }}
+                  className="p-1 hover:bg-white/20 rounded-md transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setScale(1); }}
+                  className="ml-1 px-2 py-1 text-[10px] bg-blue-600 hover:bg-blue-700 rounded font-bold transition-colors uppercase"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-xs font-bold transition-colors shadow-lg"
+            >
+              <X className="w-4 h-4" /> Close
             </button>
-            <img src={mapUrl} alt={mapCaption || "Map"} className="w-full max-h-[85vh] object-contain rounded-lg" />
-            {mapCaption && <p className="text-center text-white/70 text-sm mt-3 italic">{mapCaption}</p>}
           </div>
+
+          <div className="flex-1 relative overflow-auto flex items-center justify-center p-8 bg-black/20 rounded-2xl border border-white/5 my-2">
+            <div 
+              className="transition-transform duration-200 ease-out" 
+              style={{ transform: `scale(${scale})` }}
+              onClick={e => e.stopPropagation()}
+            >
+              <img
+                src={mapUrl}
+                alt={mapCaption || "Map"}
+                className="max-w-none shadow-2xl rounded-sm"
+              />
+            </div>
+          </div>
+          
+          {mapCaption && (
+            <div className="bg-white/10 backdrop-blur-md px-6 py-2.5 rounded-full mx-auto border border-white/10 text-white/90 text-sm font-medium shadow-2xl">
+              {mapCaption}
+            </div>
+          )}
         </div>
       )}
     </>
@@ -779,12 +859,10 @@ function MultiSectionListeningExam({ test, onClose }: { test: ListeningTest; onC
                     {hasMap ? (
                       <div className="flex gap-5 items-start">
                         {/* Map panel */}
-                        <div className="w-72 shrink-0 sticky top-4 self-start rounded-lg border-2 border-blue-300 overflow-hidden">
-                          <div className="bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800 border-b border-blue-200">Map</div>
-                          <img
-                            src={(sec as any).mapUrl}
-                            alt={(sec as any).mapCaption || "Map"}
-                            className="w-full object-contain bg-white"
+                        <div className="w-72 shrink-0 sticky top-4 self-start">
+                          <MapViewer 
+                            mapUrl={(sec as any).mapUrl} 
+                            mapCaption={(sec as any).mapCaption} 
                           />
                         </div>
                         {/* Questions panel */}

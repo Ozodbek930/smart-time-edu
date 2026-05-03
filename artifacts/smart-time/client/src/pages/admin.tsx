@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useLocation, Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useI18n } from "@/lib/i18n";
 import { motion, AnimatePresence } from "framer-motion";
+import { rawToIELTSBand, ieltsToCEFR, calculateOverallBand } from "@/lib/scoring";
 import {
   BookOpen, ArrowLeft, LogOut, Plus, Pencil, Trash2,
   Upload, Music, FileText, Users, BarChart3, Settings,
@@ -1899,6 +1900,12 @@ function ResultDetail({ result, listeningTests, readingTests, writingTests, spea
             <p className="text-xs text-slate-400 italic">No answer provided</p>
           )}
         </div>
+        {(result.bandScoreIELTS || result.bandScoreCEFR) && (
+          <div className="flex gap-2">
+            {result.bandScoreIELTS && <Badge className="bg-amber-100 text-amber-800 border-amber-300">IELTS: {result.bandScoreIELTS}</Badge>}
+            {result.bandScoreCEFR && <Badge className="bg-purple-100 text-purple-800 border-purple-300">CEFR: {result.bandScoreCEFR}</Badge>}
+          </div>
+        )}
       </div>
     );
   }
@@ -1925,13 +1932,21 @@ function ResultDetail({ result, listeningTests, readingTests, writingTests, spea
 
     const bgColor = result.testType === "listening" ? "bg-green-50 border-green-200" : "bg-blue-50 border-blue-200";
     const labelColor = result.testType === "listening" ? "text-green-700" : "text-blue-700";
+    const ieltsBand = rawToIELTSBand(result.score ?? 0, result.totalQuestions ?? allQs.length);
+    const cefr = ieltsToCEFR(ieltsBand);
 
     return (
       <div className={`mt-2 p-3 rounded-lg border ${bgColor} space-y-2`}>
         <div className="flex items-center justify-between">
-          <p className={`text-xs font-semibold ${labelColor}`}>
-            {testData?.title ?? result.testType} — Answers
-          </p>
+          <div className="space-y-0.5">
+            <p className={`text-xs font-semibold ${labelColor}`}>
+              {testData?.title ?? result.testType} — Answers
+            </p>
+            <div className="flex gap-2">
+              <Badge variant="outline" className="text-[10px] h-5 bg-white">IELTS {ieltsBand}</Badge>
+              <Badge variant="outline" className="text-[10px] h-5 bg-white">CEFR {cefr}</Badge>
+            </div>
+          </div>
           <span className={`text-xs font-bold ${labelColor}`}>{result.score ?? 0}/{result.totalQuestions ?? allQs.length} correct</span>
         </div>
         {allQs.length > 0 ? (
@@ -1971,6 +1986,84 @@ function ResultDetail({ result, listeningTests, readingTests, writingTests, spea
   return null;
 }
 
+function ManualGradeDialog({ result, onSuccess }: { result: TestResult; onSuccess: () => void }) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [bandIELTS, setBandIELTS] = useState(result.bandScoreIELTS || "");
+  const [bandCEFR, setBandCEFR] = useState(result.bandScoreCEFR || "");
+
+  const gradeMutation = useMutation({
+    mutationFn: (data: { bandScoreIELTS: string; bandScoreCEFR: string }) => 
+      apiRequest("PATCH", `/api/admin/test-results/${result.id}/grade`, data),
+    onSuccess: () => {
+      onSuccess();
+      setOpen(false);
+      toast({ title: "Grade saved" });
+    },
+    onError: () => toast({ title: "Failed to save grade", variant: "destructive" }),
+  });
+
+  const ieltsScores = ["", "1.0", "1.5", "2.0", "2.5", "3.0", "3.5", "4.0", "4.5", "5.0", "5.5", "6.0", "6.5", "7.0", "7.5", "8.0", "8.5", "9.0"];
+  const cefrScores = ["", "A1", "A2", "B1", "B2", "C1", "C2"];
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-2 border-amber-200 text-amber-700 hover:bg-amber-50"
+        onClick={() => setOpen(true)}
+      >
+        <Plus className="w-3.5 h-3.5" /> Grade
+      </Button>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Set Manual Grade</DialogTitle>
+          <DialogDescription>
+            Assign IELTS and CEFR scores for this {result.testType} submission.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid grid-cols-2 gap-4 py-4">
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase text-slate-500">IELTS Band</label>
+            <select
+              value={bandIELTS}
+              onChange={(e) => setBandIELTS(e.target.value)}
+              className="w-full p-2 border rounded-md text-sm bg-white"
+            >
+              {ieltsScores.map(val => (
+                <option key={val} value={val}>{val || "N/A"}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase text-slate-500">CEFR Level</label>
+            <select
+              value={bandCEFR}
+              onChange={(e) => setBandCEFR(e.target.value)}
+              className="w-full p-2 border rounded-md text-sm bg-white"
+            >
+              {cefrScores.map(val => (
+                <option key={val} value={val}>{val || "N/A"}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button
+            onClick={() => gradeMutation.mutate({ bandScoreIELTS: bandIELTS, bandScoreCEFR: bandCEFR })}
+            disabled={gradeMutation.isPending}
+            className="bg-amber-600 hover:bg-amber-700"
+          >
+            {gradeMutation.isPending ? "Saving..." : "Save Grade"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function TestResultsTab() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -1986,6 +2079,7 @@ function TestResultsTab() {
   const { data: readingTests } = useQuery<ReadingTest[]>({ queryKey: ["/api/reading-tests"] });
   const { data: writingTests } = useQuery<WritingTest[]>({ queryKey: ["/api/writing-tests"] });
   const { data: spTests } = useQuery<SpeakingTest[]>({ queryKey: ["/api/speaking-tests"] });
+  const { data: fullMockTests } = useQuery<FullMockTest[]>({ queryKey: ["/api/fullmock-tests"] });
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>("all");
@@ -2022,6 +2116,41 @@ function TestResultsTab() {
 
   const uniqueUsers = [...new Map((results ?? []).map(r => [r.userId, r])).values()];
 
+  const groupedFullMocks = useMemo(() => {
+    if (filterType !== "fullmock") return [];
+    const groups: Record<string, TestResult[]> = {};
+    (results ?? []).forEach(r => {
+      if (!r.fullmockId) return;
+      const key = `${r.userId}-${r.fullmockId}-${new Date(r.completedAt).toDateString()}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(r);
+    });
+
+    return Object.entries(groups).map(([key, group]) => {
+      const uId = group[0].userId;
+      const fmId = group[0].fullmockId!;
+      const fm = fullMockTests?.find(f => f.id === fmId);
+      const latestDate = [...group].sort((a,b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())[0].completedAt;
+      
+      const sectionsBands = group.map(s => {
+        if (s.testType === "writing" || s.testType === "speaking") return s.bandScoreIELTS;
+        return rawToIELTSBand(s.score ?? 0, s.totalQuestions || 40);
+      });
+      const overall = calculateOverallBand(sectionsBands);
+
+      return {
+        id: `group-${key}`,
+        isGroup: true,
+        userId: uId,
+        fullmockId: fmId,
+        title: fm?.title || "Full Mock Exam",
+        completedAt: latestDate,
+        sections: group,
+        overall: overall,
+      };
+    }).sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+  }, [results, filterType, fullMockTests]);
+
   if (isLoading) return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
 
   return (
@@ -2033,12 +2162,12 @@ function TestResultsTab() {
       <CardContent>
         {/* Filters */}
         <div className="flex gap-2 mb-4 flex-wrap">
-          {["all", "listening", "reading", "writing", "speaking"].map(t => (
+          {["all", "listening", "reading", "writing", "speaking", "fullmock"].map(t => (
             <button
               key={t}
               onClick={() => setFilterType(t)}
               className={`text-xs px-3 py-1 rounded-full border font-medium capitalize transition-colors ${filterType === t ? "bg-slate-800 text-white border-slate-800" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
-            >{t === "all" ? "All Types" : t}</button>
+            >{t === "all" ? "All Types" : t === "fullmock" ? "Full Mock" : t}</button>
           ))}
           <select
             value={filterUser}
@@ -2053,79 +2182,162 @@ function TestResultsTab() {
         </div>
 
         <div className="space-y-2">
-          {filtered.map((r) => (
-            <div key={r.id} className="rounded-lg border bg-white dark:bg-slate-800/30 overflow-hidden" data-testid={`row-result-${r.id}`}>
-              <div className="flex items-center px-4 py-3 gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                <div
-                  className="flex-1 min-w-0 cursor-pointer"
-                  onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                  data-testid={`button-expand-result-${r.id}`}
+          {filterType === "fullmock" ? (
+            groupedFullMocks.map((g) => (
+              <div key={g.id} className="rounded-lg border bg-white dark:bg-slate-800/30 overflow-hidden">
+                <div 
+                  className="flex items-center px-4 py-3 gap-3 hover:bg-slate-50 cursor-pointer"
+                  onClick={() => setExpandedId(expandedId === g.id ? null : g.id)}
                 >
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-sm truncate">{getUserName(r.userId)}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded border font-medium capitalize ${typeColor[r.testType] ?? "bg-slate-100 text-slate-700"}`}>
-                      {r.testType}
-                    </span>
-                    {r.fullmockId && (
-                      <span className="text-xs px-2 py-0.5 rounded border font-medium bg-slate-100 text-slate-600 border-slate-200">
-                        Full Mock
-                      </span>
-                    )}
-                    {r.score != null && r.totalQuestions ? (
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded border ${r.score / r.totalQuestions >= 0.7 ? "bg-green-50 text-green-700 border-green-200" : r.score / r.totalQuestions >= 0.5 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-red-50 text-red-700 border-red-200"}`}>
-                        {r.score}/{r.totalQuestions}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground italic">Submitted</span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {r.completedAt ? new Date(r.completedAt).toLocaleString("uk-UA") : "—"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => deleteMutation.mutate(r.id)}
-                    disabled={deleteMutation.isPending}
-                    className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
-                    title="Delete result"
-                    data-testid={`button-delete-result-${r.id}`}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                  <div
-                    className="cursor-pointer p-1"
-                    onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                  >
-                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expandedId === r.id ? "rotate-180" : ""}`} />
-                  </div>
-                </div>
-              </div>
-
-              <AnimatePresence>
-                {expandedId === r.id && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="px-4 pb-4 border-t pt-1">
-                      <ResultDetail
-                        result={r}
-                        listeningTests={listeningTests}
-                        readingTests={readingTests}
-                        writingTests={writingTests}
-                        speakingTests={spTests}
-                      />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm">{getUserName(g.userId)}</span>
+                      <span className="text-xs px-2 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200 font-bold uppercase tracking-tight">Full Mock</span>
+                      <span className="text-xs text-muted-foreground truncate">{g.title}</span>
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          ))}
-          {!filtered.length && (
+                    <div className="flex gap-4 mt-1.5 overflow-x-auto pb-1 no-scrollbar">
+                      {["listening", "reading", "writing", "speaking"].map(type => {
+                        const sec = g.sections.find(s => s.testType === type);
+                        if (!sec) return null;
+                        const hasGrade = (type === "writing" || type === "speaking") 
+                          ? (sec.bandScoreIELTS || sec.bandScoreCEFR)
+                          : sec.score != null;
+                        
+                        return (
+                          <div key={type} className="flex flex-col">
+                            <span className="text-[9px] uppercase font-bold text-muted-foreground/60">{type.slice(0,1)}</span>
+                            <span className={`text-[11px] font-bold ${hasGrade ? "text-slate-900" : "text-amber-500 italic"}`}>
+                              {hasGrade 
+                                ? (type === "writing" || type === "speaking" 
+                                  ? (sec.bandScoreIELTS ? `IELTS ${sec.bandScoreIELTS}` : sec.bandScoreCEFR)
+                                  : `${sec.score}/${sec.totalQuestions}`)
+                                : "Grading…"}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-col items-end">
+                       <p className="text-[10px] text-muted-foreground whitespace-nowrap">{new Date(g.completedAt).toLocaleString("uk-UA")}</p>
+                       {g.overall !== "0" && (
+                         <div className="mt-1 flex items-center gap-1.5 bg-slate-900 text-white px-2 py-0.5 rounded shadow-sm">
+                           <span className="text-[9px] font-bold uppercase tracking-widest opacity-70">Overall</span>
+                           <span className="text-sm font-black">{g.overall}</span>
+                         </div>
+                       )}
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expandedId === g.id ? "rotate-180" : ""}`} />
+                  </div>
+                </div>
+                <AnimatePresence>
+                  {expandedId === g.id && (
+                    <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
+                      <div className="px-4 pb-4 border-t bg-slate-50/50 space-y-4 pt-4">
+                        {["listening", "reading", "writing", "speaking"].map(type => {
+                          const sec = g.sections.find(s => s.testType === type);
+                          if (!sec) return null;
+                          return (
+                            <div key={sec.id} className="space-y-1">
+                              <p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
+                                <span className={`w-1 h-3 rounded-full ${typeColor[type] || "bg-slate-300"}`} />
+                                {type} result
+                              </p>
+                              <ResultDetail result={sec} listeningTests={listeningTests} readingTests={readingTests} writingTests={writingTests} speakingTests={spTests} />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ))
+          ) : (
+            filtered.map((r) => (
+              <div key={r.id} className="rounded-lg border bg-white dark:bg-slate-800/30 overflow-hidden" data-testid={`row-result-${r.id}`}>
+                <div className="flex items-center px-4 py-3 gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <div
+                    className="flex-1 min-w-0 cursor-pointer"
+                    onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                    data-testid={`button-expand-result-${r.id}`}
+                  >
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm truncate">{getUserName(r.userId)}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded border font-medium capitalize ${typeColor[r.testType] ?? "bg-slate-100 text-slate-700"}`}>
+                        {r.testType}
+                      </span>
+                      {r.fullmockId && (
+                        <span className="text-xs px-2 py-0.5 rounded border font-medium bg-slate-100 text-slate-600 border-slate-200">
+                          Full Mock
+                        </span>
+                      )}
+                      {r.score != null && r.totalQuestions ? (
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded border ${r.score / r.totalQuestions >= 0.7 ? "bg-green-50 text-green-700 border-green-200" : r.score / r.totalQuestions >= 0.5 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-red-50 text-red-700 border-red-200"}`}>
+                          {r.score}/{r.totalQuestions}
+                        </span>
+                      ) : (r.bandScoreIELTS || r.bandScoreCEFR) ? (
+                        <span className="text-xs font-bold px-2 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">
+                          {r.bandScoreIELTS ? `IELTS: ${r.bandScoreIELTS}` : `CEFR: ${r.bandScoreCEFR}`}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">Submitted</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {r.completedAt ? new Date(r.completedAt).toLocaleString("uk-UA") : "—"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => deleteMutation.mutate(r.id)}
+                      disabled={deleteMutation.isPending}
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
+                      title="Delete result"
+                      data-testid={`button-delete-result-${r.id}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                    <div
+                      className="cursor-pointer p-1"
+                      onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                    >
+                      <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expandedId === r.id ? "rotate-180" : ""}`} />
+                    </div>
+                  </div>
+                </div>
+
+                <AnimatePresence>
+                  {expandedId === r.id && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-4 pb-4 border-t pt-1">
+                        <ResultDetail
+                          result={r}
+                          listeningTests={listeningTests}
+                          readingTests={readingTests}
+                          writingTests={writingTests}
+                          speakingTests={spTests}
+                        />
+                        {(r.testType === "writing" || r.testType === "speaking") && (
+                          <div className="mt-3 flex justify-end">
+                            <ManualGradeDialog result={r} onSuccess={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/test-results"] })} />
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ))
+          )}
+          {((filterType === "fullmock" && !groupedFullMocks.length) || (filterType !== "fullmock" && !filtered.length)) && (
             <div className="text-center text-muted-foreground py-8 rounded-lg border">No results found</div>
           )}
         </div>

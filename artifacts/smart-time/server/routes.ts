@@ -245,6 +245,45 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+    const { bandScoreIELTS, bandScoreCEFR } = req.body;
+    
+    const result = await storage.getTestResult(id);
+    if (!result) return res.status(404).json({ message: "Result not found" });
+
+    const updated = await storage.updateTestResult(id, { 
+      bandScoreIELTS: bandScoreIELTS || null,
+      bandScoreCEFR: bandScoreCEFR || null 
+    });
+    
+    if (updated) {
+      const typeLabel = result.testType.charAt(0).toUpperCase() + result.testType.slice(1);
+      const scoreLabel = bandScoreIELTS ? `IELTS Band ${bandScoreIELTS}` : (bandScoreCEFR ? `CEFR ${bandScoreCEFR}` : "a band score");
+      
+      await storage.createNotification({
+        userId: result.userId,
+        message: `Your ${typeLabel} test has been graded! You received ${scoreLabel}.`,
+        type: "grade",
+        link: "/dashboard",
+        isRead: false
+      });
+    }
+
+    res.json(updated);
+  });
+
+  // Notifications
+  app.get("/api/notifications", requireAuth, async (req, res) => {
+    const list = await storage.getNotificationsByUser(req.session.userId!);
+    res.json(list);
+  });
+
+  app.patch("/api/notifications/:id/read", requireAuth, async (req, res) => {
+    const id = String(req.params.id);
+    const updated = await storage.markNotificationRead(id);
+    if (!updated) return res.status(404).json({ message: "Notification not found" });
+    res.json(updated);
+  });
+
   app.get("/api/admin/users", requireAdmin, async (_req, res) => {
     const allUsers = await storage.getAllUsers();
     const safeUsers = allUsers.map(({ password, ...u }) => u);

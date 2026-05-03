@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, Headphones, BookOpen, PenTool, ChevronRight, Award, Clock, FileCheck, LogOut, Trophy, Home, ArrowLeft, ZoomIn, ZoomOut, Settings2 } from "lucide-react";
+import { Mic, Headphones, BookOpen, PenTool, ChevronRight, Award, Clock, FileCheck, LogOut, Trophy, Home, ArrowLeft, ZoomIn, ZoomOut, Settings2, Bell, BellDot, CheckCircle2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { motion } from "framer-motion";
@@ -13,6 +13,10 @@ import { useModeStore } from "@/lib/useModeStore";
 import { bandToCEFR, CEFR_COLORS, MODE_LABELS, MODE_DESCRIPTIONS } from "@/lib/testModeConfig";
 import type { TestMode } from "@/lib/testModeConfig";
 import { useFontSize } from "@/lib/fontSizeContext";
+import { rawToIELTSBand, calculateOverallBand } from "@/lib/scoring";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { Notification } from "@shared/schema";
+import { formatDistanceToNow } from "date-fns";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
@@ -44,6 +48,19 @@ export default function Dashboard() {
     queryKey: ["/api/test-results/my"],
     enabled: !!user,
   });
+
+  const { data: notifications = [] } = useQuery<Notification[]>({
+    queryKey: ["/api/notifications"],
+    enabled: !!user,
+    refetchInterval: 30000, // Poll every 30s
+  });
+
+  const markReadMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("PATCH", `/api/notifications/${id}/read`, {}),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/notifications"] }),
+  });
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -129,14 +146,14 @@ export default function Dashboard() {
 
   const testsCompleted = myResults?.length || 0;
   const scoredResults = myResults?.filter(r => r.score != null && r.totalQuestions && r.totalQuestions > 0) || [];
-  const avgScore = scoredResults.length > 0
-    ? Math.round(scoredResults.reduce((sum, r) => sum + ((r.score! / r.totalQuestions!) * 9), 0) / scoredResults.length)
-    : 0;
+  
+  const sectionBands = scoredResults.map(r => rawToIELTSBand(r.score!, r.totalQuestions!));
+  const avgScore = calculateOverallBand(sectionBands);
 
   const progressStats = [
     { icon: FileCheck, value: String(testsCompleted), label: t.dashboardPage.testsCompleted, color: "text-amber-600" },
     { icon: Clock, value: String(testsCompleted > 0 ? Math.round(testsCompleted * 0.5) : 0), label: t.dashboardPage.practiceHours, color: "text-blue-600" },
-    { icon: Award, value: avgScore > 0 ? String(avgScore) : "—", label: t.dashboardPage.currentBand, color: "text-emerald-600" },
+    { icon: Award, value: avgScore !== "0.0" && avgScore !== "0" ? String(avgScore) : "—", label: t.dashboardPage.currentBand, color: "text-emerald-600" },
   ];
 
   return (
@@ -189,6 +206,65 @@ export default function Dashboard() {
             </nav>
 
             <div className="flex items-center gap-3">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full hover:bg-muted" data-testid="button-notifications">
+                    {unreadCount > 0 ? (
+                      <>
+                        <BellDot className="w-5 h-5 text-amber-500 animate-pulse" />
+                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-background">
+                          {unreadCount}
+                        </span>
+                      </>
+                    ) : (
+                      <Bell className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0 overflow-hidden rounded-2xl shadow-2xl border-border/40" align="end">
+                  <div className="bg-slate-50 dark:bg-slate-900 border-b px-4 py-3 flex items-center justify-between">
+                    <h3 className="font-bold text-sm">Notifications</h3>
+                    {unreadCount > 0 && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{unreadCount} New</span>}
+                  </div>
+                  <div className="max-h-[400px] overflow-y-auto no-scrollbar">
+                    {notifications.length === 0 ? (
+                      <div className="py-12 text-center text-muted-foreground">
+                        <Bell className="w-12 h-12 mx-auto mb-2 opacity-10" />
+                        <p className="text-sm font-medium">No notifications yet</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col">
+                        {notifications.map((n) => (
+                          <div 
+                            key={n.id} 
+                            onClick={() => !n.isRead && markReadMutation.mutate(n.id)}
+                            className={`px-4 py-3 border-b border-border/50 transition-colors cursor-pointer hover:bg-muted/30 ${!n.isRead ? "bg-amber-50/30 dark:bg-amber-500/5 select-none" : "opacity-70"}`}
+                          >
+                            <div className="flex gap-3">
+                              <div className={`mt-1 shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${n.type === 'grade' ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-600'}`}>
+                                {n.type === 'grade' ? <Trophy className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+                              </div>
+                              <div className="flex-1 space-y-1">
+                                <p className={`text-sm leading-snug ${!n.isRead ? 'font-bold' : 'font-medium'}`}>{n.message}</p>
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-[10px] text-muted-foreground">{formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}</span>
+                                  {!n.isRead && <span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50" />}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {notifications.length > 0 && (
+                    <div className="p-2 bg-slate-50 dark:bg-slate-900 border-t text-center">
+                       <p className="text-[10px] text-muted-foreground">Stay updated with your progress</p>
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
+
               <LanguageSwitcher />
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted">
                 <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
