@@ -5,7 +5,7 @@ import { Mic, Headphones, BookOpen, PenTool, ChevronRight, Award, Clock, FileChe
 import { useI18n } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { motion } from "framer-motion";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import type { User, TestResult } from "@shared/schema";
 import { useEffect } from "react";

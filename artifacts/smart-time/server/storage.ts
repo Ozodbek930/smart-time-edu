@@ -79,6 +79,7 @@ export interface IStorage {
   getSiteContentByKey(key: string): Promise<SiteContent | undefined>;
   upsertSiteContent(item: InsertSiteContent): Promise<SiteContent>;
 
+  getTestResult(id: string): Promise<TestResult | undefined>;
   getTestResults(): Promise<TestResult[]>;
   getTestResultsByUser(userId: string): Promise<TestResult[]>;
   getTestResultsByFullmock(fullmockId: string, userId: string): Promise<TestResult[]>;
@@ -252,6 +253,11 @@ export class DatabaseStorage implements IStorage {
     }
     const [created] = await db.insert(siteContent).values(item).returning();
     return created;
+  }
+
+  async getTestResult(id: string): Promise<TestResult | undefined> {
+    const [result] = await db.select().from(testResults).where(eq(testResults.id, id));
+    return result;
   }
 
   async getTestResults(): Promise<TestResult[]> {

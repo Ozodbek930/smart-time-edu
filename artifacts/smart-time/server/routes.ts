@@ -245,6 +245,8 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+  app.patch("/api/admin/test-results/:id", requireAdmin, async (req, res) => {
+    const id = String(req.params.id);
     const { bandScoreIELTS, bandScoreCEFR } = req.body;
     
     const result = await storage.getTestResult(id);
